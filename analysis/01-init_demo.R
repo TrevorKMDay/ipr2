@@ -35,8 +35,10 @@ demoC <- read_tsv(here("data", "IPR_demographics_comments-250127.tsv"),
 
 clean_gender <- function(sex, gender) {
 
+  # This function takes what people put in the free-entry field and recodes it
+
   gender1 <- str_to_lower(gender) %>%
-    trimws() %>%
+    str_trim() %>%
     str_remove_all("[ -]")
 
   gender2 <- case_match(
@@ -80,40 +82,34 @@ clean_gender <- function(sex, gender) {
 }
 
 demo1_sex <- demo1 %>%
-  select(CandID, id, p1p2, matches("(sex|gender)$")) %>%
+  select(CandID, id, p1p2, matches("parent._(sex|gender)$")) %>%
   pivot_longer(-c(CandID, id, p1p2)) %>%
   na.omit() %>%
   separate_wider_delim(name, delim = "_", names = c(NA, "name")) %>%
   pivot_wider() %>%
   mutate(
-    gender2 = map2_chr(sex, gender, clean_gender)
-  ) %>%
-  arrange(id, gender2, desc(p1p2)) %>%
-  group_by(id) %>%
-  mutate(
-    new_parent = c("p2", "p1")
+
+    # Clean gender
+    gender2 = map2_chr(sex, gender, clean_gender),
+
+    # Reassign gender categories
+    gender2 = if_else(sex == "male" & gender == "Female",
+                      "transwoman", gender2,
+                      missing = gender2),
+
+
   )
 
+# Check for missing data
+demo1_sex[!complete.cases(demo1_sex), ]
 table(demo1_sex$sex, demo1_sex$gender2, useNA = "a")
-
-table(demo1_sex$p1p2, demo1_sex$gender2)
-
-missing_sex <- demo1_sex %>%
-  filter(
-    is.na(gender2)
-  )
-
-demo1_sex %>%
-  filter(
-    sex == "male",
-    gender2 == "woman"
-  )
 
 demo1_gender_wide <- demo1_sex %>%
   pivot_wider(id_cols = id, names_from = p1p2, values_from = gender2)
 
-table(demo1_gender_wide[, c("iprParent1", "iprParent2")])
+table(demo1_gender_wide[, c("iprParent1", "iprParent2")], useNA = "a")
 
+# Remove original gender field for clarity
 demo1_sex2 <- demo1_sex %>%
   select(-gender)
 
@@ -139,8 +135,6 @@ educ_to_y <- function(educ) {
   return(y)
 
 }
-
-
 
 demo1_ed <- demo1 %>%
   arrange(id) %>%
@@ -172,6 +166,7 @@ all_eds_paired <- demo1_ed %>%
   ) %>%
   na.omit()
 
+# Check for median imputation based on partner education - but not that helpful
 all_eds_paired %>%
   group_by(ed.x) %>%
   nest() %>%
@@ -180,7 +175,7 @@ all_eds_paired %>%
   )
 
 demo1_sexed <- left_join(demo1_sex2, demo1_ed, by = join_by(id, p1p2)) %>%
-  select(id, p1p2, new_parent, sex, gender2, ed, ed_y)
+  select(id, p1p2, sex, gender2, ed, ed_y)
 
 # Siblings ====
 
@@ -197,24 +192,28 @@ demo1_sibs <- demo1 %>%
   filter(
     p1p2 == "iprParent1"
   ) %>%
-  select(-ends_with("age")) %>%
+  select(-matches("sibling._age")) %>%
+  rename(
+    child_age = age
+  ) %>%
   mutate(
     across(ends_with("_DoB"), ~round(interval(.x, Date_taken) / years(1), 3))
   ) %>%
   select_all(~str_replace(., "DoB", "age")) %>%
-  select(id, starts_with("sibling"), -contains("comments")) %>%
-  pivot_longer(-id, names_pattern = "(sibling[1-7])_(.*)",
+  select(id, child_age, starts_with("sibling"), -contains("comments")) %>%
+  pivot_longer(-c(id, child_age), names_pattern = "(sibling[1-7])_(.*)",
                names_to = c("sibling", ".value")) %>%
   filter(
     sex != "not_answered" & type != "not_answered" & home != "not_answered"
   )
 
-demo1_sibs_older <- child_ages %>%
+# Group by child and compare to all their siblings
+demo1_sibs_older <- demo1_sibs %>%
   filter(
     id %in% inclusions
   ) %>%
-  left_join(demo1_sibs, join_by(id)) %>%
   mutate(
+    child_age_y = round(child_age / 12, 3),
     sib_is_older = age > child_age_y
   ) %>%
   group_by(id) %>%
@@ -224,25 +223,132 @@ demo1_sibs_older <- child_ages %>%
     any_older_sibs = if_else(number_of_sibs == 0,
                              FALSE,
                              map_lgl(data, ~any(.x$sib_is_older))),
-    child_birth_order = if_else(any_older_sibs, "later_born", "first_born")
+    child_birth_order = if_else(any_older_sibs, "later_born", "first_born",
+                                missing = "missing")
   )
 
+# Check for missing data
 missing_sibs <- demo1_sibs_older %>%
   filter(
     is.na(child_birth_order)
   ) %>%
   unnest(data)
 
-demo1_sibs_final <- demo1_sibs_older %>%
-  left_join(
-    select(demo1, id, sex)
+# Connect birth order to child sex and write out
+demo1_sibs_final <- demo1 %>%
+  select(id, sex) %>%
+  left_join(demo1_sibs_older, join_by(id)) %>%
+  rename(
+    child_sex = sex
   ) %>%
-  select(id, sex, child_birth_order)
+  mutate(
+    # Anyone not in demo1_sibs_older table gets merged with a NA: they don't
+    #     have _any_ sibs so they're the first born.
+    #   Re-replace missing values with NA.
+    child_birth_order = replace_na(child_birth_order, "first_born") %>%
+      replace(., . == "missing", NA_character_),
+    child_sex = str_to_lower(child_sex)
+  ) %>%
+  select(id, child_sex, child_birth_order)
 
-write_rds(demo1_sexed, "analysis/demo_parents.rds")
-write_rds(demo1_sibs_final, "analysis/demo_child.rds")
+write_rds(demo1_sibs_final, here("analysis", "demo_child.rds"))
 
 # Demo2 ====
 
-demo2 <- read_delim("data/IPR_demographics_extended-250127.tsv", delim = "\t",
-                    show_col_types = FALSE)
+demo2 <- read_delim("data/IPR_demographics_extended-250204.tsv", delim = "\t",
+                    show_col_types = FALSE) %>%
+  rename(
+    id = PSCID,
+    p1p2 = Visit_label,
+    me_TSWC = q1_TSWC,
+    partner_TSWC = q2_TSWC,
+    neither_TSWC = q3_TSWC,
+    both_TSWC = q4_TSWC
+  ) %>%
+  select(id, p1p2, ends_with("TSWC"), contains("CGSS")) %>%
+  filter(
+    id %in% inclusions
+  ) %>%
+  mutate(
+    across(ends_with("TSWC"), as.numeric),
+  )
+
+assign_pcg <- function(both, me) {
+
+  if (both[1] > both[2]) {
+    result <- c("pcg", "scg")
+  } else if (both[2] > both[1]) {
+    result <- c("scg", "pcg")
+  } else if (both[1] == both[2]) {
+
+    if (me[1] > me[2]) {
+      result <- c("pcg", "scg")
+    } else if (me[2] > me[1]) {
+      result <- c("scg", "pcg")
+    } else if (me[1] == me[2]) {
+      result <- c(NA, NA)
+    }
+
+  }
+
+  return(result)
+
+}
+
+demo2_tswc <- demo2 %>%
+  select(-ends_with("CGSS")) %>%
+  filter(
+    id != "IPR211500",
+    !str_detect(id, "PHE")
+  ) %>%
+  mutate(
+    meboth_TSWC = (me_TSWC + both_TSWC) / 2
+  ) %>%
+  group_by(id) %>%
+  mutate(
+    pcg = assign_pcg(meboth_TSWC, me_TSWC)
+  ) %>%
+  left_join(demo1_sex2, join_by(id, p1p2)) %>%
+  mutate(
+    pcg = case_when(
+      # One of the lesbian couples rated each other identically, just
+      #   assign a PCG here
+      id == "IPR314271" & p1p2 == "iprParent1" ~ "pcg",
+      is.na(pcg) & gender2 == "man" ~ "pcg",
+      is.na(pcg) & gender2 == "woman" ~ "scg",
+      .default = pcg
+    )
+  )
+
+demo2_tswc %>%
+  group_by(id, pcg) %>%
+  summarize(
+    n = n()
+  ) %>%
+  filter(
+    n > 1
+  )
+
+# Check for missing data
+demo2_tswc[!complete.cases(demo2_tswc), ] %>%
+  arrange(id)
+
+table(demo2_tswc$pcg, demo2_tswc$gender2, useNA = "a")
+
+demo2_pcg <- demo2_tswc %>%
+  select(id, p1p2, pcg, meboth_TSWC)
+
+# Save final results ====
+
+parents_demo <- left_join(demo1_sexed, demo2_pcg, join_by(id, p1p2)) %>%
+  rename(
+    p_sex = sex,
+    p_gender = gender2,
+    p_ed = ed,
+    p_edy = ed_y,
+    p_pcg = pcg,
+    p_meboth_tswc = meboth_TSWC
+  )
+
+write_rds(parents_demo, here("analysis", "demo_parents.rds"))
+
