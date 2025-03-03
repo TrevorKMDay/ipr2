@@ -179,7 +179,7 @@ demo1_sexed <- left_join(demo1_sex2, demo1_ed, by = join_by(id, p1p2)) %>%
 
 # Siblings ====
 
-child_ages <- read_rds("analysis/cdi_wide_included.rds") %>%
+child_ages <- read_rds("cdi_wide_included.rds") %>%
   select(id, age) %>%
   rename(
     child_age_mo = age
@@ -235,27 +235,27 @@ missing_sibs <- demo1_sibs_older %>%
   unnest(data)
 
 # Connect birth order to child sex and write out
-demo1_sibs_final <- demo1 %>%
-  select(id, sex) %>%
-  left_join(demo1_sibs_older, join_by(id)) %>%
+demo1_sibs_final <- select(demo1, id, sex) %>%
+  left_join(
+    demo1_sibs_older,
+    join_by(id)
+  ) %>%
   rename(
     child_sex = sex
   ) %>%
+  select(id, child_sex, child_birth_order) %>%
+  distinct() %>%
   mutate(
-    # Anyone not in demo1_sibs_older table gets merged with a NA: they don't
-    #     have _any_ sibs so they're the first born.
-    #   Re-replace missing values with NA.
+    # Anyone missing here has no siblings, and so is the first born
     child_birth_order = replace_na(child_birth_order, "first_born") %>%
-      replace(., . == "missing", NA_character_),
-    child_sex = str_to_lower(child_sex)
-  ) %>%
-  select(id, child_sex, child_birth_order)
+      replace(., . == "missing", NA)
+  )
 
-write_rds(demo1_sibs_final, here("analysis", "demo_child.rds"))
+write_rds(demo1_sibs_final, "demo_child.rds")
 
 # Demo2 ====
 
-demo2 <- read_delim("data/IPR_demographics_extended-250204.tsv", delim = "\t",
+demo2 <- read_delim("../data/IPR_demographics_extended-250204.tsv", delim = "\t",
                     show_col_types = FALSE) %>%
   rename(
     id = PSCID,
@@ -299,7 +299,6 @@ demo2_tswc <- demo2 %>%
   select(-ends_with("CGSS")) %>%
   filter(
     id != "IPR211500",
-    !str_detect(id, "PHE")
   ) %>%
   mutate(
     meboth_TSWC = (me_TSWC + both_TSWC) / 2

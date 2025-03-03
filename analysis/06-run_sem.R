@@ -1,4 +1,5 @@
 library(tidyverse)
+library(here)
 library(lavaan)
 library(lavaanPlot)
 
@@ -11,6 +12,8 @@ inclusions <- read_rds(here("analysis", "vrrsb_wide_included.rds"))$id
 # Demographics ====
 
 demo_parents <- read_rds(here("analysis", "demo_parents.rds"))
+
+demo_parents[!complete.cases(demo_parents), ]
 
 demo_parents_wide <- demo_parents %>%
   mutate(
@@ -35,7 +38,7 @@ demo_parents_wide <- demo_parents %>%
 demo_parents_new <- demo_parents %>%
   select(id, p1p2, p_pcg)
 
-demo_child <- read_rds("analysis/demo_child.rds") %>%
+demo_child <- read_rds(here("analysis", "demo_child.rds")) %>%
   filter(
     id %in% inclusions
   ) %>%
@@ -46,11 +49,13 @@ demo_child <- read_rds("analysis/demo_child.rds") %>%
   ungroup() %>%
   select(id, c_first_born, c_male)
 
+demo_child[!complete.cases(demo_child), ]
+
 # This re-assigns the p1/p2 numbers
 
 ## CDI ====
 
-cdi <- read_rds("analysis/cdi_wide_included.rds") %>%
+cdi <- read_rds(here("analysis", "cdi_wide_included.rds")) %>%
   select(id, age, starts_with("words_produced_number")) %>%
   select_all(~str_replace(., "words_produced_number", "cdi_total")) %>%
   filter(
@@ -67,6 +72,7 @@ cdi <- read_rds("analysis/cdi_wide_included.rds") %>%
   left_join(demo_parents_new, join_by(id, p1p2)) %>%
   select(id, age, p_pcg, cdi_total) %>%
   filter(
+    # Fix me
     !is.na(p_pcg)
   ) %>%
   pivot_wider(
@@ -77,129 +83,75 @@ cdi <- read_rds("analysis/cdi_wide_included.rds") %>%
 
 ## vrRSB ====
 
-# vrrsb <- read_rds("analysis/vrrsb_wide_included.rds") %>%
-#   select(id, starts_with("VRS")) %>%
-#   rename(
-#     vrrsb_VRS_p1 = VRS_p1,
-#     vrrsb_VRS_p2 = VRS_p2
-#   ) %>%
-#   filter(
-#     id %in% inclusions
-#   ) %>%
-#   pivot_longer(
-#     starts_with("vrrsb_VRS"),
-#   ) %>%
-#   mutate(
-#     p1p2 = str_extract(name, "iprParent[12]")
-#   ) %>%
-#   left_join(demo_parents_new, join_by(id, p1p2)) %>%
-#   select(id, new_parent, ) %>%
-#   pivot_wider(
-#     names_from = new_parent,
-#     names_prefix = "vrrsb_VRS_"
-#   )
+vrrsb_vrs <- read_rds(here("analysis", "vrrsb_wide_included.rds")) %>%
+  select(id, starts_with("VRS")) %>%
+  filter(
+    id %in% inclusions
+  ) %>%
+  pivot_longer(-id) %>%
+  mutate(
+    p1p2 = str_extract(name, "iprParent[12]")
+  ) %>%
+  left_join(demo_parents_new, join_by(id, p1p2)) %>%
+  filter(
+    # Fix me
+    !is.na(p_pcg)
+  ) %>%
+  pivot_wider(
+    id_cols = id,
+    names_from = p_pcg,
+    names_prefix = "vrrsb_VRS_"
+  )
 
 ## BAPQ ====
 
-bapq <- read_rds("analysis/bapq_wide_all.rds") %>%
-  select(id, starts_with("total")) %>%
+bapq <- read_rds(here("analysis", "bapq_wide_all.rds")) %>%
+  select(id, starts_with("total_"), starts_with("pl_")) %>%
   rowwise() %>%
   mutate(
-    p_bapq_totalBE_p1 = mean(c(total_self_p1, total_partner_p2), na.rm = TRUE),
-    p_bapq_totalBE_p2 = mean(c(total_self_p2, total_partner_p1), na.rm = TRUE)
+
+    # Calculate best estimates for total and pragmatic language
+    #   mean or fall through
+
+    p_bapq_totalBE_iprParent1 = mean(c(total_self_iprParent1,
+                                       total_partner_iprParent2),
+                                      na.rm = TRUE),
+    p_bapq_totalBE_iprParent2 = mean(c(total_self_iprParent2,
+                                       total_partner_iprParent1),
+                                      na.rm = TRUE),
+
+    p_bapq_plBE_iprParent1 = mean(c(pl_self_iprParent1,
+                                       pl_partner_iprParent2),
+                                     na.rm = TRUE),
+    p_bapq_plBE_iprParent2 = mean(c(pl_self_iprParent2,
+                                       pl_partner_iprParent1),
+                                     na.rm = TRUE)
   ) %>%
   ungroup() %>%
-  select(id, contains("totalBE")) %>%
+  select(id, contains("BE")) %>%
   pivot_longer(-id) %>%
   mutate(
-    p1p2 = if_else(str_detect(name, "p1"), "iprParent1", "iprParent2")
+    p1p2 = str_remove(name, "p_bapq_.*BE_"),
+    name = str_extract(name, "[^_]*BE")
   ) %>%
   left_join(demo_parents_new, by = join_by(id, p1p2)) %>%
   na.omit() %>%
-  pivot_wider(id_cols = id, names_from = p_pcg, values_from = value,
-              names_prefix = "p_bapq_totalBE_")
+  pivot_wider(id_cols = id, names_from = c(name, p_pcg), values_from = value,
+              names_prefix = "p_bapq_")
 
 all_data <- demo_child %>%
   distinct() %>%
   left_join(demo_parents_wide, join_by(id)) %>%
   left_join(
-    select(bapq, id, contains("totalBE"))
+    select(bapq, id, contains("BE")),
+    join_by(id)
   ) %>%
   left_join(cdi, join_by(id)) %>%
-  ungroup()
-
-# Run the SEM
-
-# TO DO: Rename parent vars to have p_ prefix
-
-model <-
-  '
-    cdi_total_pcg ~~ cdi_total_scg
-
-    cdi_total_pcg ~ age + c_male + c_first_born +
-      p_man_pcg + p_edy_pcg + p_bapq_totalBE_pcg + p_tswc_pcg
-
-    cdi_total_scg ~ age + c_male + c_first_born +
-      p_man_scg + p_edy_scg + p_bapq_totalBE_scg + p_tswc_scg
-
-    # Covariances between parents
-    p_edy_pcg ~~ p_edy_scg
-    p_bapq_totalBE_pcg ~~ p_bapq_totalBE_scg
-    p_man_pcg ~~ p_man_scg
-    p_tswc_pcg ~~ p_tswc_scg
-
-    # Let educ/asd covary, est r=.17
-    p_edy_pcg ~ p_bapq_totalBE_pcg
-    p_edy_scg ~ p_bapq_totalBE_scg
-
-    # Let parent gender/asd covary, d=.37
-    p_man_pcg ~ p_bapq_totalBE_pcg
-    p_man_scg ~ p_bapq_totalBE_scg
-
-  '
-
-sem_results <- sem(model, data = all_data)
-
-lavaanPlot(sem_results, coefs = TRUE, covs = TRUE)
-
-# SEM 2 ====
-
-all_data2 <- all_data %>%
-  pivot_longer(-c(id, age, starts_with("c_"))) %>%
+  left_join(vrrsb_vrs, join_by(id)) %>%
+  ungroup() %>%
+  rowwise() %>%
   mutate(
-    pcg = str_extract(name, "[ps]cg$"),
-    name = str_remove(name, "_[ps]cg$")
-  ) %>%
-  pivot_wider() %>%
-  group_by(id) %>%
-  mutate(
-    cdi_total_scg = rev(cdi_total)
-  ) %>%
-  ungroup()
+    vrrsb_vrs_mean = mean(c(vrrsb_VRS_pcg, vrrsb_VRS_scg))
+  )
 
-model2 <- '
-
-  cdi_total ~~ cdi_total_scg
-
-  cdi_total ~ age + c_male + c_first_born +
-    p_man + p_edy + p_bapq_totalBE + p_tswc +
-    c_male:p_man
-
-  cdi_total_scg ~ age + c_male + c_first_born +
-    p_man + p_edy + p_bapq_totalBE + p_tswc +
-    c_male:p_man
-
-  p_man ~~ p_edy
-  p_man ~~ p_bapq_totalBE
-  p_man ~~ p_tswc
-
-  # Set some covariances to 0
-  c_male ~~ 0*c_first_born
-  c_male ~~ 0*age
-  age ~~ 0*c_first_born
-
-'
-
-sem_results2 <- sem(model2, data = all_data2)
-lavaanPlot(sem_results2, coefs = TRUE, covs = TRUE)
-
+all_data[!complete.cases(all_data), ]

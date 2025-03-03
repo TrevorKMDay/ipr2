@@ -3,27 +3,17 @@ library(corrr)
 library(irr)
 
 cdi <- read_rds(here("analysis", "cdi_wide_included.rds")) %>%
-  select(id, age, starts_with("words_produced_number_p")) %>%
+  select(id, age, starts_with("words_produced_number_")) %>%
   rename(
-    cdi_total_p1 = words_produced_number_p1,
-    cdi_total_p2 = words_produced_number_p2
+    # cdi_total_p1 = words_produced_number_p1,
+    # cdi_total_p2 = words_produced_number_p2
   )
 
 vrrsb <- read_rds(here("analysis", "vrrsb_wide_included.rds")) %>%
   select(id, age, everything(), -starts_with("age_p")) %>%
   rename_with(~paste0("vrrsb_", .x), -c(id, age))
 
-bapq <- read_rds(here("analysis", "bapq_wide_all.rds")) %>%
-  select(id, starts_with("total")) %>%
-  rowwise() %>%
-  mutate(
-    bapq_missing_p1 = is.na(total_self_p1) | is.na(total_partner_p2),
-    bapq_missing_p2 = is.na(total_self_p2) | is.na(total_partner_p1),
-    bapq_totalbest_p1 = mean(c(total_self_p1, total_partner_p2), na.rm = TRUE),
-    bapq_totalbest_p2 = mean(c(total_self_p2, total_partner_p1), na.rm = TRUE)
-  )
 
-bapq2 <- select(bapq, id, contains("best"))
 
 # Combine ====
 
@@ -77,7 +67,8 @@ correlations_table <- left_join(correlations_r, correlations_p,
 
 child_long <- child_rows_complete %>%
   pivot_longer(-c(id, starts_with("age"))) %>%
-  separate_wider_delim(name, delim = "_", names = c("inst", "score", "p1p2")) %>%
+  separate_wider_delim(name, delim = "_",
+                       names = c("inst", "score", "p1p2")) %>%
   pivot_wider(names_from = p1p2)
 
 child_long2 <- child_long %>%

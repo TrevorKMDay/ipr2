@@ -15,12 +15,12 @@ bapq0 <- read_tsv(here("data", "IPR_BAPQ-250128.tsv"), na = "NULL",
     !str_detect(CommentID, "Testing")
   )
 
-
+# Rreduce columns
 bapq <- bapq0 %>%
   select(id, p1p2, contains("score")) %>%
   mutate(
     across(contains("score"), as.numeric),
-    p1p2 = if_else(p1p2 == "iprParent1", "p1", "p2")
+    # p1p2 = if_else(p1p2 == "iprParent1", "p1", "p2")
   ) %>%
   select_all(~str_replace(., "pragmatic_language", "pl"))
 
