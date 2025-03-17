@@ -1,11 +1,13 @@
 library(tidyverse)
 library(here)
 
+select <- dplyr::select
+
 exclusions <- read_rds(here("analysis", "exclusions.rds"))
 inclusions <- read_rds(here("analysis", "vrrsb_wide_included.rds"))$id
 
 # Read in data ====
-
+#
 demo1 <- read_tsv(here("data", "IPR_demographics-250204.tsv"),
                   show_col_types = FALSE, na = "NULL") %>%
   rename(
@@ -179,7 +181,7 @@ demo1_sexed <- left_join(demo1_sex2, demo1_ed, by = join_by(id, p1p2)) %>%
 
 # Siblings ====
 
-child_ages <- read_rds("cdi_wide_included.rds") %>%
+child_ages <- read_rds(here("analysis", "cdi_wide_included.rds")) %>%
   select(id, age) %>%
   rename(
     child_age_mo = age
@@ -255,8 +257,8 @@ write_rds(demo1_sibs_final, "demo_child.rds")
 
 # Demo2 ====
 
-demo2 <- read_delim("../data/IPR_demographics_extended-250204.tsv", delim = "\t",
-                    show_col_types = FALSE) %>%
+demo2 <- read_delim(here("data", "IPR_demographics_extended-250204.tsv"),
+                    delim = "\t", show_col_types = FALSE) %>%
   rename(
     id = PSCID,
     p1p2 = Visit_label,
@@ -272,6 +274,116 @@ demo2 <- read_delim("../data/IPR_demographics_extended-250204.tsv", delim = "\t"
   mutate(
     across(ends_with("TSWC"), as.numeric),
   )
+
+cgss_qs <- tribble(
+    ~name, ~scale,
+    "ballet", "girls",
+    "room", "home",
+    "laundry", "home",
+    "garbage", "home",
+    "football", "boys",
+    "military_toys", "boys",
+    "kitchen_toys", "girls",
+    "gun_toys", "boys",
+    "jewelry_toys", "girls",
+    "dishes_toys", "girls",
+    "tools_toys", "boys",
+    "sweeping", "home",
+    "grass", "home",
+    "set_table", "home",
+    "nurse_toys", "girls",
+    "hopscotch", "girls",
+    "gi_joes", "boys",
+    "truck_toys", "boys",
+    "barbie_dolls", "girls",
+    "dishes", "home",
+    "baby_dolls", "girls",
+    "car_toys", "boys",
+  ) %>%
+  mutate(
+    item = row_number()
+  )
+
+cgss <- demo2 %>%
+  select(id, p1p2, contains("CGSS")) %>%
+  pivot_longer(starts_with("q"), names_to = "item") %>%
+  mutate(
+    item = str_remove_all(item, "[^0-9]") %>%
+      as.numeric(),
+
+    value_numeric = case_match(
+      value,
+      "very_negative" ~ -3,
+      "somewhat_negative" ~ -2,
+      "slightly_negative" ~ -1,
+      "neutral" ~ 0,
+      "slightly_positive" ~ 1,
+      "somewhat_positive" ~ 2,
+      "very_positive"~ 3,
+      "not_answered" ~ NA,
+    )
+
+  ) %>%
+  left_join(cgss_qs, by = join_by(item))
+
+cgss_summary <- cgss %>%
+  group_by(id, p1p2, scale) %>%
+  summarize(
+    n_nonNA = sum(!is.na(value_numeric)),
+    score = sum(value_numeric, na.rm = TRUE)
+  ) %>%
+  mutate(
+    score = if_else(n_nonNA < 4, NA, score)
+  ) %>%
+  pivot_wider(id_cols = id, names_from = c(p1p2, scale), values_from = score)
+
+library(corrr)
+
+cgss_cors_rnp <- cgss_summary %>%
+  ungroup() %>%
+  select(-id) %>%
+  as.matrix()
+
+cgss_cors <- cgss_cors_rnp$r %>%
+  as_cordf() %>%
+  shave() %>%
+  stretch(na.rm = TRUE)
+
+cgss_p <- cgss_cors_rnp$P %>%
+  as_cordf() %>%
+  shave() %>%
+  stretch(na.rm = TRUE) %>%
+  rename(
+    p = r
+  )
+
+cgss_cors_final <- left_join(cgss_cors, cgss_p) %>%
+  mutate(
+    p_cor = p.adjust(p, method = "fdr"),
+    stars = case_when(
+      p_cor < .05  ~ "*",
+      p_cor < .01  ~ "**",
+      p_cor < .001 ~ "***",
+      TRUE ~ ""
+    ),
+    label = paste0(round(r, 2), stars)
+  )
+
+lims <- unique(c(cgss_cors$x, cgss_cors$y))
+
+cgss_cors_final %>%
+  pivot_wider(id_cols = x, names_from = y, values_from = label) %>%
+  clipr::write_clip()
+
+ggplot(cgss_cors_final, aes(x = x, y = y, fill = r)) +
+  geom_tile() +
+  geom_text(aes(label = label)) +
+  scale_x_discrete(limits = lims) +
+  scale_y_discrete(limits = lims) +
+  scale_fill_gradient2() +
+  theme_bw() +
+  labs(x = NULL, y = NULL,
+       caption = "* p < .05 after FDR correction")
 
 assign_pcg <- function(both, me) {
 
@@ -297,9 +409,6 @@ assign_pcg <- function(both, me) {
 
 demo2_tswc <- demo2 %>%
   select(-ends_with("CGSS")) %>%
-  filter(
-    id != "IPR211500",
-  ) %>%
   mutate(
     meboth_TSWC = (me_TSWC + both_TSWC) / 2
   ) %>%
@@ -351,3 +460,4 @@ parents_demo <- left_join(demo1_sexed, demo2_pcg, join_by(id, p1p2)) %>%
 
 write_rds(parents_demo, here("analysis", "demo_parents.rds"))
 
+parents_demo[!complete.cases(parents_demo), ]
