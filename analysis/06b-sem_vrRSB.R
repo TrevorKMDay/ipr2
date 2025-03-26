@@ -228,6 +228,7 @@ ggplot(pe, aes(x = rhs)) +
                "Parent BAPQ", "Parent Educ. (y)", "Parent Man",
                "Parent Time w/ Child (%)")
   ) +
-  scale_shape_manual(values = c(21, 23))
+  scale_shape_manual(values = c(21, 23)) +
   theme_bw() +
   labs(y = "Estimate", x = "Predictor")
+

@@ -31,6 +31,8 @@
 
 \newcommand{\bapqpcg}{$6.0$}
 \newcommand{\bapqscg}{$3.7$}
+\newcommand{\manpcg}{$0.9$}
+\newcommand{\manscg}{$3.4$}
 
 % format: pcg/scg outcome~cov
 
@@ -47,7 +49,7 @@
 \newcommand{\ns}[1]{\textit{#1\textsuperscript{n.s.}}}
 
 %\tikzexternalize[prefix={tikz_external/}, only named]
-%\tikzsetnextfilename{vrs}
+%\tikzsetnextfilename{vrrsbt}
 
 \newcommand{\total}{vrRSB\textsubscript{T}}
 
@@ -55,37 +57,37 @@
 
     \begin{tikzpicture}
 
-        \node (vrs1) [outcome, fill=red!30] {\total{} PCG};
-        \node (vrs2) [outcome, fill=blue!30, below of=vrs1,
+        \node (vrrsbt1) [outcome, fill=red!30] {\total{} PCG};
+        \node (vrrsbt2) [outcome, fill=blue!30, below of=vrrsbt1,
                         node distance=2cm] {\total{} SCG};
-        \node (vrscenter) at ($(vrs1)!0.5!(vrs2)$) {} ;
+        \node (vrrsbtcenter) at ($(vrrsbt1)!0.5!(vrrsbt2)$) {} ;
 
         % Place this stack of nodes to the left of the center of the things
-        \node (age) [child, left of=vrscenter,
+        \node (age) [child, left of=vrrsbtcenter,
                         node distance=4cm] {Age (mo)} ;
         \node (bo)  [child, above of=age, node distance=1.5cm] {Birth order} ;
         \node (sex) [child, below of=age, node distance=1.5cm] {Sex (M)} ;
 
         % arrows
-        \draw [dblarr] (vrs1) -- node[anchor=west] {\vrrsbcov} (vrs2) ;
+        \draw [dblarr] (vrrsbt1) -- node[anchor=west] {\vrrsbcov} (vrrsbt2) ;
 
         %age
-        \draw [arrow] (age) -- node[anchor=south] {\agepcg} (vrs1) ;
+        \draw [arrow] (age) -- node[anchor=south] {\agepcg} (vrrsbt1) ;
         \draw [->,dashed]
             (age)  --
                 node[anchor=north,yshift=-0.1cm] {\ns{\agescg}}
-            (vrs2) ;
+            (vrrsbt2) ;
 
         \draw [arrow]
             (sex) --
                 node[anchor=west,xshift=0.6cm,yshift=0.2cm] {\sexpcg}
-            (vrs1) ;
+            (vrrsbt1) ;
 
-        \draw [->,dashed] (sex) -- node[anchor=north] {\ns{\sexscg}} (vrs2) ;
+        \draw [->,dashed] (sex) -- node[anchor=north] {\ns{\sexscg}} (vrrsbt2) ;
 
         % PARENTS ====
 
-        \node (parentcenter) [right of=vrscenter, node distance=4cm] {} ;
+        \node (parentcenter) [right of=vrrsbtcenter, node distance=4cm] {} ;
 
         \node (p1bapq) [p1, above of=parentcenter, node distance=1.5cm]
             {BAPQ  PCG} ;
@@ -169,9 +171,21 @@
             (p2tswc) ;
 
         % bapq effects
-        \draw [arrow,thick] (p1bapq) -- node[anchor=south] {\bapqpcg} (vrs1) ;
+        \draw [arrow,thick] (p1bapq) -- node[anchor=south] {\bapqpcg} (vrrsbt1) ;
+        \draw [arrow,thick] (p2bapq) -- node[anchor=north] {\bapqscg} (vrrsbt2) ;
 
-        \draw [arrow,thick] (p2bapq) -- node[anchor=north] {\bapqscg} (vrs2) ;
+        % Parent gender effects
+        \draw [->,dashed]
+            (p1gender) to
+                [bend right]
+                node[anchor=south] {\ns{\manpcg}}
+            (vrrsbt1) ;
+
+        \draw [arrow,thick]
+            (p2gender) to
+                [bend left]
+                node[anchor=south] {\manscg}
+            (vrrsbt2) ;
 
     \end{tikzpicture}
 
