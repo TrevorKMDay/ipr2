@@ -7,7 +7,7 @@ exclusions <- read_rds(here("analysis", "exclusions.rds"))
 inclusions <- read_rds(here("analysis", "vrrsb_wide_included.rds"))$id
 
 # Read in data ====
-#
+
 demo1 <- read_tsv(here("data", "IPR_demographics-250204.tsv"),
                   show_col_types = FALSE, na = "NULL") %>%
   rename(
@@ -23,7 +23,8 @@ demo1 <- read_tsv(here("data", "IPR_demographics-250204.tsv"),
   select(CandID, id, p1p2, age, sex, Date_taken,
          matches("parent[12]_(gender|sex|relationship)"),
          ends_with("education"),
-         matches("sibling")) %>%
+         matches("sibling"),
+         household_income, subject_race, subject_ethnicity) %>%
   arrange(id, p1p2)
 
 demoC <- read_tsv(here("data", "IPR_demographics_comments-250127.tsv"),
@@ -33,6 +34,19 @@ demoC <- read_tsv(here("data", "IPR_demographics_comments-250127.tsv"),
   ) %>%
   select(CandID, result)
 
+## Quick stats =====
+
+demo_hh_re <- demo1 %>%
+  select(id, p1p2, sex, household_income, subject_race, subject_ethnicity) %>%
+  filter(
+    p1p2 == "iprParent1"
+  )
+
+table(demo_hh_re$sex, useNA = "a")
+table(demo_hh_re$household_income, useNA = "a")
+
+table(demo_hh_re$subject_race, demo_hh_re$subject_ethnicity, useNA = "a")
+
 # Sex ====
 
 clean_gender <- function(sex, gender) {
@@ -41,6 +55,7 @@ clean_gender <- function(sex, gender) {
 
   gender1 <- str_to_lower(gender) %>%
     str_trim() %>%
+
     str_remove_all("[ -]")
 
   gender2 <- case_match(
@@ -179,6 +194,8 @@ all_eds_paired %>%
 demo1_sexed <- left_join(demo1_sex2, demo1_ed, by = join_by(id, p1p2)) %>%
   select(id, p1p2, sex, gender2, ed, ed_y)
 
+demo1_sexed[!complete.cases(demo1_sexed), ]
+
 # Siblings ====
 
 child_ages <- read_rds(here("analysis", "cdi_wide_included.rds")) %>%
@@ -275,115 +292,6 @@ demo2 <- read_delim(here("data", "IPR_demographics_extended-250204.tsv"),
     across(ends_with("TSWC"), as.numeric),
   )
 
-cgss_qs <- tribble(
-    ~name, ~scale,
-    "ballet", "girls",
-    "room", "home",
-    "laundry", "home",
-    "garbage", "home",
-    "football", "boys",
-    "military_toys", "boys",
-    "kitchen_toys", "girls",
-    "gun_toys", "boys",
-    "jewelry_toys", "girls",
-    "dishes_toys", "girls",
-    "tools_toys", "boys",
-    "sweeping", "home",
-    "grass", "home",
-    "set_table", "home",
-    "nurse_toys", "girls",
-    "hopscotch", "girls",
-    "gi_joes", "boys",
-    "truck_toys", "boys",
-    "barbie_dolls", "girls",
-    "dishes", "home",
-    "baby_dolls", "girls",
-    "car_toys", "boys",
-  ) %>%
-  mutate(
-    item = row_number()
-  )
-
-cgss <- demo2 %>%
-  select(id, p1p2, contains("CGSS")) %>%
-  pivot_longer(starts_with("q"), names_to = "item") %>%
-  mutate(
-    item = str_remove_all(item, "[^0-9]") %>%
-      as.numeric(),
-
-    value_numeric = case_match(
-      value,
-      "very_negative" ~ -3,
-      "somewhat_negative" ~ -2,
-      "slightly_negative" ~ -1,
-      "neutral" ~ 0,
-      "slightly_positive" ~ 1,
-      "somewhat_positive" ~ 2,
-      "very_positive"~ 3,
-      "not_answered" ~ NA,
-    )
-
-  ) %>%
-  left_join(cgss_qs, by = join_by(item))
-
-cgss_summary <- cgss %>%
-  group_by(id, p1p2, scale) %>%
-  summarize(
-    n_nonNA = sum(!is.na(value_numeric)),
-    score = sum(value_numeric, na.rm = TRUE)
-  ) %>%
-  mutate(
-    score = if_else(n_nonNA < 4, NA, score)
-  ) %>%
-  pivot_wider(id_cols = id, names_from = c(p1p2, scale), values_from = score)
-
-library(corrr)
-
-cgss_cors_rnp <- cgss_summary %>%
-  ungroup() %>%
-  select(-id) %>%
-  as.matrix()
-
-cgss_cors <- cgss_cors_rnp$r %>%
-  as_cordf() %>%
-  shave() %>%
-  stretch(na.rm = TRUE)
-
-cgss_p <- cgss_cors_rnp$P %>%
-  as_cordf() %>%
-  shave() %>%
-  stretch(na.rm = TRUE) %>%
-  rename(
-    p = r
-  )
-
-cgss_cors_final <- left_join(cgss_cors, cgss_p) %>%
-  mutate(
-    p_cor = p.adjust(p, method = "fdr"),
-    stars = case_when(
-      p_cor < .05  ~ "*",
-      p_cor < .01  ~ "**",
-      p_cor < .001 ~ "***",
-      TRUE ~ ""
-    ),
-    label = paste0(round(r, 2), stars)
-  )
-
-lims <- unique(c(cgss_cors$x, cgss_cors$y))
-
-cgss_cors_final %>%
-  pivot_wider(id_cols = x, names_from = y, values_from = label) %>%
-  clipr::write_clip()
-
-ggplot(cgss_cors_final, aes(x = x, y = y, fill = r)) +
-  geom_tile() +
-  geom_text(aes(label = label)) +
-  scale_x_discrete(limits = lims) +
-  scale_y_discrete(limits = lims) +
-  scale_fill_gradient2() +
-  theme_bw() +
-  labs(x = NULL, y = NULL,
-       caption = "* p < .05 after FDR correction")
 
 assign_pcg <- function(both, me) {
 
@@ -458,6 +366,6 @@ parents_demo <- left_join(demo1_sexed, demo2_pcg, join_by(id, p1p2)) %>%
     p_meboth_tswc = meboth_TSWC
   )
 
+parents_demo[!complete.cases(parents_demo), ]
 write_rds(parents_demo, here("analysis", "demo_parents.rds"))
 
-parents_demo[!complete.cases(parents_demo), ]

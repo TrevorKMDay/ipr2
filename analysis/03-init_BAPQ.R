@@ -15,7 +15,7 @@ bapq0 <- read_tsv(here("data", "IPR_BAPQ-250128.tsv"), na = "NULL",
     !str_detect(CommentID, "Testing")
   )
 
-# Rreduce columns
+# Reduce columns
 bapq <- bapq0 %>%
   select(id, p1p2, contains("score")) %>%
   mutate(
@@ -33,16 +33,5 @@ bapq_wide <- bapq %>%
 
 write_rds(bapq_wide, "bapq_wide_all.rds")
 
-bapq_included <- bapq_wide %>%
-  filter(
-
-  )
-
-bapq_complete <- bapq_wide %>%
-  filter(
-    !is.na(total_self_p1),
-    !is.na(total_partner_p1),
-    !is.na(total_self_p2),
-    !is.na(total_partner_p2)
-  )
+bapq_complete <- complete.cases(bapq_wide)
 
