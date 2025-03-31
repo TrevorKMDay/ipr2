@@ -336,20 +336,42 @@ demo2_tswc <- demo2 %>%
     )
   )
 
-demo2_tswc %>%
-  group_by(id, pcg) %>%
-  summarize(
-    n = n()
-  ) %>%
-  filter(
-    n > 1
-  )
+# demo2_tswc %>%
+#   group_by(id, pcg) %>%
+#   summarize(
+#     n = n()
+#   ) %>%
+#   filter(
+#     n > 1
+#   )
 
 # Check for missing data
 demo2_tswc[!complete.cases(demo2_tswc), ] %>%
   arrange(id)
 
 table(demo2_tswc$pcg, demo2_tswc$gender2, useNA = "a")
+
+tswc2 <- demo2_tswc %>%
+  ungroup() %>%
+  select(id, pcg, ends_with("TSWC")) %>%
+  select_all(~str_remove(., "_TSWC")) %>%
+  mutate(
+    partnerboth = partner + both
+  ) %>%
+  pivot_wider(id_cols = id, names_from = pcg,
+              values_from = c(me, partner, neither, both, meboth, partnerboth))
+
+library(Hmisc)
+library(corrplot)
+
+tswc_corrs <- tswc2 %>%
+  select(-id) %>%
+  as.matrix() %>%
+  rcorr()
+
+corrplot(tswc_corrs$r, method = "color",
+         addCoef.col = "black", number.digits = 2,
+         p.mat = tswc_corrs$P, insig = "blank")
 
 demo2_pcg <- demo2_tswc %>%
   select(id, p1p2, pcg, meboth_TSWC)

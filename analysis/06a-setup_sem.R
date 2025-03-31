@@ -59,7 +59,7 @@ cdi <- read_rds(here("analysis", "cdi_wide_included.rds")) %>%
 ## vrRSB ====
 
 vrrsb <- read_rds(here("analysis", "vrrsb_wide_included.rds")) %>%
-  select(id, age, outlier, starts_with("total")) %>%
+  select(id, age, outlier, starts_with("total"), starts_with("nwords")) %>%
   rename(
     vrrsb_outlier = outlier,
     vrrsb_total_pcg = total_pcg,
@@ -122,4 +122,82 @@ all_data[!complete.cases(all_data), ]
 
 write_rds(all_data, "analysis/sem_data.rds")
 
+cor(all_data$nwords_pcg, all_data$cdi_total_pcg)
+cor(all_data$nwords_scg, all_data$cdi_total_scg)
 
+nwords <- all_data %>%
+  select(id, age, starts_with("nwords"), starts_with("cdi_total")) %>%
+  pivot_longer(-c(id, age)) %>%
+  mutate(
+    pcg = str_extract(name, "[ps]cg"),
+    name = str_remove(name, "_[ps]cg"),
+    value2 = replace(value, value > 680, 680)
+  ) %>%
+  pivot_wider(values_from = c(value, value2)) %>%
+  mutate(
+    diff1 = value_nwords - value_cdi_total,
+    diff2 = value2_nwords - value2_cdi_total
+  )
+
+ggplot(nwords, aes(x = value_nwords, y = value_cdi_total)) +
+  geom_point(aes(fill = age), color = "white", shape = 21, size = 2) +
+  geom_smooth(aes(color = pcg), se = FALSE) +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  scale_fill_viridis(limits = c(23, 27), oob = scales::squish) +
+  coord_cartesian(ylim = c(0, 680)) +
+  theme_bw()
+
+ggplot(nwords, aes(x = value2_nwords, y = value2_cdi_total)) +
+  geom_point(aes(fill = age), color = "white", shape = 21, size = 2) +
+  geom_smooth(aes(color = pcg), se = FALSE) +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  scale_fill_viridis(limits = c(23, 27), oob = scales::squish) +
+  coord_cartesian(ylim = c(0, 680)) +
+  theme_bw()
+
+ggplot(nwords, aes(diff1)) +
+  geom_histogram()
+
+ggplot(nwords, aes(diff2)) +
+  geom_histogram()
+
+cor(nwords$value2_cdi_total, nwords$value2_nwords)
+
+# Differences
+
+all_diffs <- all_data %>%
+  select(id, age, starts_with("c"), contains("tswc"), starts_with("cdi_total"),
+         starts_with("vrrsb_total_")) %>%
+  mutate(
+    tswc_diff = p_tswc_pcg - p_tswc_scg ,
+    cdi_diff = cdi_total_pcg - cdi_total_scg,
+    vrrsb_diff = vrrsb_total_pcg - vrrsb_total_scg
+  )
+
+all_diffs_long <- all_diffs %>%
+  select(id, age,ends_with("diff")) %>%
+  pivot_longer(c(cdi_diff, vrrsb_diff))
+
+ggplot(all_diffs_long, aes(x = tswc_diff, y = abs(value))) +
+  geom_point(alpha = 0.5) +
+  geom_smooth() +
+  facet_wrap(vars(name), scales = "free") +
+  theme_bw()
+
+lm(cdi_diff ~ tswc_diff + age + c_male + c_first_born, data = all_diffs) %>%
+  summary()
+
+lm(vrrsb_diff ~ tswc_diff + age + c_male, data = all_diffs) %>%
+  summary()
+
+lm(abs(cdi_diff) ~ abs(tswc_diff) + age + c_male + c_first_born, data = all_diffs) %>%
+  summary()
+
+lm(abs(vrrsb_diff) ~ abs(tswc_diff) + age + c_male, data = all_diffs) %>%
+  summary()
+
+ggplot(all_diffs_long, aes(x = age, y = value)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  facet_wrap(vars(name), scales = "free") +
+  theme_bw()

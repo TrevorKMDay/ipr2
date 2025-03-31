@@ -4,6 +4,8 @@ library(viridis)
 library(here)
 library(vcd)
 
+summarize <- dplyr::summarize
+
 # Unigram frequency ====
 
 freq <- read_csv(here("data/unigram_freq.csv"), show_col_types = FALSE) %>%
@@ -221,11 +223,6 @@ interesting_rzd <- rzd %>%
     abs(.std.resid) > 3
   )
 
-cdi_items_nested2 <- cdi_items_nested %>%
-  filter(
-    !is.na(freq_log10)
-  ) %>%
-  left_join(expected_residuals)
 
 ggplot(cdi_items_nested, aes(x = expected_agr, y = agr_rate)) +
   geom_point(aes(color = freq_log10), alpha = 0.75) +
@@ -256,7 +253,9 @@ ggplot(cdi_categories, aes(x = mean_eer, y = mean_agr_rate)) +
 
 # vrrRSB ====
 
-vrrsb <- read_tsv("data/IPR_vrRSB-250127.tsv", show_col_types = FALSE) %>%
+reverse_items <- c(15, 16, 18:26, 28:34, 36, 37, 41:42, 47)
+
+vrrsb0 <- read_tsv("data/IPR_vrRSB-250127.tsv", show_col_types = FALSE) %>%
   filter(
     PSCID %in% included
   ) %>%
@@ -266,24 +265,32 @@ vrrsb <- read_tsv("data/IPR_vrRSB-250127.tsv", show_col_types = FALSE) %>%
                        too_many = "merge") %>%
   mutate(
     q_id = as.numeric(q_id),
+
     value_numeric = case_match(
       value,
-      "not_at_all" ~ 3,
-      "somewhat" ~ 2,
-      "about_the_same" ~ 1,
-      "more" ~ 0
+      # VRS label, all others
+      c("not_at_all", "not_true")  ~ 3,
+      c("somewhat", "sometimes")   ~ 2,
+      c("about_the_same", "often") ~ 1,
+      c("more", "almost_always")   ~ 0
     ),
+
+    value_numeric = if_else(q_id %in% reverse_items,
+                            (-1 * value_numeric) + 3,
+                            value_numeric),
+
     value_factor = ordered(value_numeric)
+
   ) %>%
   rename(
     id = PSCID,
     p1p2 = Visit_label
+  ) %>%
+  filter(
+    q_id < 50
   )
 
-vrs <- vrrsb %>%
-  filter(
-    q_id <= 13
-  ) %>%
+vrrsb <- vrrsb0 %>%
   pivot_wider(id_cols = c(id, q_id, q_desc),
               names_from = p1p2, values_from = value_factor) %>%
   group_by(q_id, q_desc) %>%
@@ -294,18 +301,30 @@ vrs <- vrrsb %>%
                 ~DescTools::CohenKappa(.x, weights = "E", conf.level = .95))
   )
 
-vrs2 <- vrs %>%
+vrrsb_kappa <- vrrsb %>%
   select(-data, -confusion) %>%
   unnest(kappa) %>%
   mutate(
-    value = c("k", "lwr.ci", "upr.ci")
+    value = c("k", "lwr.ci", "upr.ci"),
+    label = str_replace_all(q_desc, "_", " "),
+    across(where(is.numeric), ~round(.x, 3))
   ) %>%
   pivot_wider(names_from = value, values_from = kappa)
 
-ggplot(vrs2, aes(x = k, y = q_id)) +
+png("plots/vrrsb_kappa.png", width = 6.5, height = 6.5, units = "in", res = 300)
+
+ggplot(vrrsb_kappa, aes(x = k, y = q_id)) +
   geom_pointrange(aes(xmin = lwr.ci, xmax = upr.ci)) +
   geom_vline(xintercept = 0, color = "red") +
-  scale_x_continuous(limits = c(NA, 0.4)) +
-  scale_y_continuous(labels = vrs$q_desc, breaks = 1:13, trans = "reverse") +
+  scale_x_continuous(limits = c(NA, 1)) +
+  scale_y_continuous(labels = vrrsb_kappa$label,
+                     breaks = 1:49, minor_breaks = NULL,
+                     trans = "reverse") +
   theme_bw() +
-  labs(x = "Weighted kappa [95% CI]", y = "Q #")
+  labs(x = "Weighted kappa [95% CI]", y = "Question")
+
+dev.off()
+
+vrrsb_kappa_ordered <- vrrsb_kappa %>%
+  arrange(desc(k))
+vr

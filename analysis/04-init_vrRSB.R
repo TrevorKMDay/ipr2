@@ -26,12 +26,13 @@ vrrsb <- vrrsb0 %>%
     SC = social_communicative_items,
     RRB = restricted_repetitive_items
   ) %>%
-  select(id, p1p2, age, VRS, RSB, SC, RRB) %>%
+  select(id, p1p2, age, VRS, RSB, SC, RRB, q_50_num_words) %>%
   filter(
     id %in% demo_parents$id
   ) %>%
-  mutate(
-    total = VRS + RSB
+  rename(
+    total = RSB,
+    nwords = q_50_num_words
   ) %>%
   left_join(demo_parents, by = join_by(id, p1p2))
 
@@ -67,12 +68,12 @@ vrrsb4 <- vrrsb3 %>%
   mutate(
 
     r = map(data, ~cor.test(.x$pcg, .x$scg, use = "c")),
-    r_val = map_dbl(r, ~round(.x$estimate, 3)),
+    r_val = map_dbl(r, ~round(.x$estimate, 2)),
     r_p = map_dbl(r, ~.x$p.value),
 
     icc = map(data, ~icc(select(.x, pcg, scg),
                          type = "agreement")),
-    icc_val = map_dbl(icc, ~round(.x$value, 3)),
+    icc_val = map_dbl(icc, ~round(.x$value, 2)),
     icc_p = map_dbl(icc, ~.x$p.value)
 
   )
@@ -86,12 +87,12 @@ vrrsb4_noutlier <- vrrsb3 %>%
   mutate(
 
     r = map(data, ~cor.test(.x$pcg, .x$scg, use = "c")),
-    r_val = map_dbl(r, ~round(.x$estimate, 3)),
+    r_val = map_dbl(r, ~round(.x$estimate, 2)),
     r_p = map_dbl(r, ~.x$p.value),
 
     icc = map(data, ~icc(select(.x, pcg, scg),
                          type = "agreement")),
-    icc_val = map_dbl(icc, ~round(.x$value, 3)),
+    icc_val = map_dbl(icc, ~round(.x$value, 2)),
     icc_p = map_dbl(icc, ~.x$p.value)
 
   )
