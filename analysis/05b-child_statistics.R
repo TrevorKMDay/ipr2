@@ -2,6 +2,7 @@ library(tidyverse)
 library(here)
 library(corrr)
 library(irr)
+library(viridis)
 
 cdi <- read_rds(here("analysis", "cdi_wide_included.rds")) %>%
   select(id, age, starts_with("words_produced_number_")) %>%
@@ -23,7 +24,7 @@ child_rows <- full_join(cdi, vrrsb, by = join_by(id),
 ## Correlations ====
 
 correlations <- child_rows %>%
-  select(age_cdi, starts_with("cdi"), starts_with("vrrsb_VRS")) %>%
+  select(age_cdi, starts_with("cdi"), starts_with("vrrsb_total")) %>%
   as.matrix() %>%
   Hmisc::rcorr()
 
@@ -76,7 +77,8 @@ plot_vrrsb <-ggplot(filter(child_long, inst == "vrrsb", score == "total"),
   ) +
   scale_color_viridis(limits = c(23, 28), oob = scales::squish) +
   theme_bw() +
-  labs(x = "PCG", y = "SCG", color = "Age (mo.)", title = "(b) vrRSB total score")
+  labs(x = "PCG", y = "SCG", color = "Age (mo.)",
+       title = "(b) vrRSB total score")
 
 library(patchwork)
 
@@ -87,5 +89,45 @@ png(here("plots", "child_plot.png"), width = 6.5, height = 3.5, units = "in",
     res = 300)
 
 print(plot_child)
+
+dev.off()
+
+
+
+cdi2 <- ggplot(filter(child_long, inst == "cdi"), aes(x = pcg, y = scg)) +
+  geom_point(aes(color = age_cdi), alpha = 0.5, size = 7.5) +
+  geom_smooth(method = "lm", fullrange = TRUE, linewidth = 3) +
+  scale_color_viridis(limits = c(23, 28), oob = scales::squish) +
+  scale_x_continuous(limits = c(0, 680), breaks = seq(0, 680, by = 136)) +
+  scale_y_continuous(limits = c(0, 680), breaks = seq(0, 680, by = 136)) +
+  theme_bw() +
+  labs(x = "PCG", y = "SCG", color = "Age (mo.)",
+       title = "(a) CDI total score") +
+  theme(text = element_text(size = 24))
+
+
+vrrsb2 <- ggplot(filter(child_long, inst == "vrrsb", score == "total"),
+                 aes(x = pcg, y = scg)) +
+  geom_point(aes(color = age_cdi), alpha = 0.5, size = 7.5) +
+  geom_smooth(method = "lm", fullrange = TRUE, linewidth = 3) +
+  geom_smooth(
+    data = filter(child_long, inst == "vrrsb", score == "total",
+                  !vrrsb_outlier),
+    method = "lm", color = "darkgreen", fill = "lightgreen",
+    fullrange = FALSE, linewidth = 2
+  ) +
+  scale_color_viridis(limits = c(23, 28), oob = scales::squish) +
+  theme_bw() +
+  labs(x = "PCG", y = "SCG", color = "Age (mo.)",
+       title = "(b) vrRSB total score") +
+  theme(text = element_text(size = 24))
+
+plot2_child <- cdi2 + vrrsb2 +
+  plot_layout(guides = "collect", axes = "collect")
+
+png(here("plots", "child_plot_poster.png"), width = 20, height = 9, units = "in",
+    res = 300)
+
+print(plot2_child)
 
 dev.off()

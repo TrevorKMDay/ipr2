@@ -22,17 +22,14 @@ vrrsb <- vrrsb0 %>%
     age = Candidate_Age,
     p1p2 = Visit_label,
     VRS = video_reference_score,
-    RSB = RSB_total_score,
+    total = RSB_total_score,
     SC = social_communicative_items,
-    RRB = restricted_repetitive_items
+    RRB = restricted_repetitive_items,
+    nwords = q_50_num_words
   ) %>%
-  select(id, p1p2, age, VRS, RSB, SC, RRB, q_50_num_words) %>%
+  select(id, p1p2, age, VRS, SC, RRB, total, nwords) %>%
   filter(
     id %in% demo_parents$id
-  ) %>%
-  rename(
-    total = RSB,
-    nwords = q_50_num_words
   ) %>%
   left_join(demo_parents, by = join_by(id, p1p2))
 
@@ -103,6 +100,7 @@ vrrsb_summary <- left_join(vrrsb4, vrrsb4_noutlier, join_by(name),
   ungroup() %>%
   mutate(
     across(where(is.numeric), ~round(.x, 3))
-  )
+  ) %>%
+  select(-starts_with("r_"))
 
 write_rds(vrrsb2, here("analysis", "vrrsb_wide_included.rds"))

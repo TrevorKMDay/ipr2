@@ -10,14 +10,6 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows, calc}
 
-\tikzstyle{outcome} = [rectangle, draw=black]
-\tikzstyle{child} = [rectangle, rounded corners, fill=green!30, draw=black]
-\tikzstyle{p1} = [rectangle, rounded corners, fill=red!30, draw=black]
-\tikzstyle{p2} = [rectangle, rounded corners, fill=blue!30, draw=black]
-
-\tikzstyle{arrow} = [thick,->]
-\tikzstyle{dblarr} = [<->]
-
 \newcommand{\cdicov}{$17\,342$}
 
 \newcommand{\cdiagepcg}{$20.6$}
@@ -55,13 +47,26 @@
 %\tikzexternalize[prefix={tikz_external/}, only named]
 %\tikzsetnextfilename{vrs}
 
+\definecolor{cdired}{HTML}{FF8080}
+\definecolor{pcgcolor}{HTML}{E070DA}
+\definecolor{scgcolor}{HTML}{70DAE0}
+\definecolor{childcolor}{HTML}{DAE070}
+
+\tikzstyle{outcome} = [rectangle, draw=black]
+\tikzstyle{child} = [rectangle, rounded corners, fill=childcolor, draw=black]
+\tikzstyle{p1} = [rectangle, rounded corners, fill=pcgcolor, draw=black]
+\tikzstyle{p2} = [rectangle, rounded corners, fill=scgcolor, draw=black]
+
+\tikzstyle{arrow} = [thick,->]
+\tikzstyle{dblarr} = [thick,<->]
+
 \begin{document}
 
     \begin{tikzpicture}
 
-        \node (cdi1) [outcome, fill=red!30] {CDI\textsubscript{T} PCG};
+        \node (cdi1) [outcome, fill=cdired] {CDI\textsubscript{T} PCG};
         \node (cdi2)
-            [outcome, fill=blue!30, below of=cdi1, node distance=2cm]
+            [outcome, fill=cdired, below of=cdi1, node distance=2cm]
             {CDI\textsubscript{T} SCG};
 
         \node (center) at ($(cdi1)!0.5!(cdi2)$) {} ;
@@ -104,11 +109,11 @@
             node[anchor=south,yshift=0.5cm,xshift=-1.5cm] {\cdivrsscg}
             (cdi2) ;
 
-        \draw [->] (age) to
+        \draw [arrow] (age) to
             [out=180,in=180]
             node[anchor=west] {-0.49}
             (vrs) ;
-        \draw [->] (sex) to
+        \draw [arrow] (sex) to
             [out=180,in=180]
             node[anchor=east] {1.08}
             (vrs) ;
@@ -118,19 +123,19 @@
         \node (parentcenter) [right of=center, node distance=4cm] {} ;
 
         \node (p1bapq) [p1, above of=parentcenter, node distance=1.5cm]
-        {BAPQ  PCG} ;
+            {BAPQ  PCG} ;
         \node (p1gender) [p1, right of=p1bapq, node distance=2.5cm]
-        {Gender (M) PCG} ;
+            {Gender (M) PCG} ;
         \node (p1educ) [p1, right of=p1gender, node distance=2.5cm]
-        {Educ (y) PCG} ;
+            {Educ (y) PCG} ;
         \node (p1tswc) [p1, right of=p1educ, node distance=2.5cm] {TSWC PCG} ;
 
         \node (p2bapq) [p2, below of=parentcenter, node distance=1.5cm]
-        {BAPQ SCG} ;
+            {BAPQ SCG} ;
         \node (p2gender) [p2, right of=p2bapq, node distance=2.5cm]
-        {Gender (M) SCG} ;
+            {Gender (M) SCG} ;
         \node (p2educ) [p2, right of=p2gender, node distance=2.5cm]
-        {Educ (y) SCG} ;
+            {Educ (y) SCG} ;
         \node (p2tswc) [p2, right of=p2educ, node distance=2.5cm] {TSWC SCG} ;
 
         \draw [dblarr] (p1bapq) --   node[anchor=west] {\bapqcov} (p2bapq) ;
@@ -196,9 +201,9 @@
 %        (p2tswc) ;
 %
 %        % bapq effects
-        \draw [arrow,thick] (p1bapq) -- node[anchor=south] {\bapqpcg} (cdi1) ;
+        \draw [arrow] (p1bapq) -- node[anchor=south] {\bapqpcg} (cdi1) ;
 %
-        \draw [->,dashed] (p2bapq)
+        \draw [arrow,dashed] (p2bapq)
             -- node[anchor=north] {\bapqscg{}\ns{}}
         (cdi2) ;
 

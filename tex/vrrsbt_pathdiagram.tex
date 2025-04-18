@@ -9,15 +9,6 @@
 
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows, calc}
-
-\tikzstyle{outcome} = [rectangle, draw=black]
-\tikzstyle{child} = [rectangle, rounded corners, fill=green!30, draw=black]
-\tikzstyle{p1} = [rectangle, rounded corners, fill=red!30, draw=black]
-\tikzstyle{p2} = [rectangle, rounded corners, fill=blue!30, draw=black]
-
-\tikzstyle{arrow} = [thick,->]
-\tikzstyle{dblarr} = [<->]
-
 \newcommand{\vrrsbcov}{$38.0$}
 \newcommand{\bapqcov}{$0.05$}
 \newcommand{\gendercov}{$-0.2$}
@@ -53,12 +44,25 @@
 
 \newcommand{\total}{vrRSB\textsubscript{T}}
 
+\definecolor{vrrsb}{HTML}{80ff80}
+\definecolor{pcgcolor}{HTML}{E070DA}
+\definecolor{scgcolor}{HTML}{70DAE0}
+\definecolor{childcolor}{HTML}{DAE070}
+
+\tikzstyle{outcome} = [rectangle, draw=black]
+\tikzstyle{child} = [rectangle, rounded corners, fill=childcolor, draw=black]
+\tikzstyle{p1} = [rectangle, rounded corners, fill=pcgcolor, draw=black]
+\tikzstyle{p2} = [rectangle, rounded corners, fill=scgcolor, draw=black]
+
+\tikzstyle{arrow} = [thick,->]
+\tikzstyle{dblarr} = [thick,<->]
+
 \begin{document}
 
     \begin{tikzpicture}
 
-        \node (vrrsbt1) [outcome, fill=red!30] {\total{} PCG};
-        \node (vrrsbt2) [outcome, fill=blue!30, below of=vrrsbt1,
+        \node (vrrsbt1) [outcome, fill=vrrsb] {\total{} PCG};
+        \node (vrrsbt2) [outcome, fill=vrrsb, below of=vrrsbt1,
                         node distance=2cm] {\total{} SCG};
         \node (vrrsbtcenter) at ($(vrrsbt1)!0.5!(vrrsbt2)$) {} ;
 
@@ -73,7 +77,7 @@
 
         %age
         \draw [arrow] (age) -- node[anchor=south] {\agepcg} (vrrsbt1) ;
-        \draw [->,dashed]
+        \draw [arrow,dashed]
             (age)  --
                 node[anchor=north,yshift=-0.1cm] {\ns{\agescg}}
             (vrrsbt2) ;
@@ -83,7 +87,9 @@
                 node[anchor=west,xshift=0.6cm,yshift=0.2cm] {\sexpcg}
             (vrrsbt1) ;
 
-        \draw [->,dashed] (sex) -- node[anchor=north] {\ns{\sexscg}} (vrrsbt2) ;
+        \draw [arrow,dashed] (sex) --
+                node[anchor=north] {\ns{\sexscg}}
+            (vrrsbt2) ;
 
         % PARENTS ====
 
@@ -115,25 +121,25 @@
 
         % PCG
 
-        \draw [->]
+        \draw [arrow]
             (p1gender) to
                 [bend right]
                 node[anchor=north]{\pcgedgender}
             (p1educ) ;
 
-        \draw [->,dashed]
+        \draw [arrow,dashed]
             (p1bapq) to
                 [out=30,in=150]
                 node[anchor=south] {\ns{\pcgedbapq}}
             (p1educ) ;
 
-        \draw [->]
+        \draw [arrow]
             (p1educ) to
                 [bend right]
                 node[anchor=north] {\pcgtswced}
             (p1tswc) ;
 
-        \draw [->]
+        \draw [arrow]
             (p1gender) to
                 [out=30,in=150]
                 node[anchor=south] {\pcgtswcgender}
@@ -146,42 +152,42 @@
         % SCG
 
 %        \draw [->] (p2gender) to [out=150, in=30] (p2bapq) ;
-        \draw [->]
+        \draw [arrow]
             (p2gender) to
                 [bend left, out=30,in=150]
                 node[anchor=south] {\scgedgender}
             (p2educ) ;
 
-        \draw [->]
+        \draw [arrow]
             (p2bapq) to
                 [bend right]
                 node[anchor=north] {\scgedbapq}
             (p2educ) ;
 
-        \draw [->,dashed]
+        \draw [arrow,dashed]
             (p2educ) to
                 [bend left]
                 node[anchor=south] {\ns{\scgtswced}}
             (p2tswc) ;
 
-        \draw [->,dashed]
+        \draw [arrow,dashed]
             (p2gender) to
                 [bend right]
                 node[anchor=north] {\ns{\scgtswcgender}}
             (p2tswc) ;
 
         % bapq effects
-        \draw [arrow,thick] (p1bapq) -- node[anchor=south] {\bapqpcg} (vrrsbt1) ;
-        \draw [arrow,thick] (p2bapq) -- node[anchor=north] {\bapqscg} (vrrsbt2) ;
+        \draw [arrow] (p1bapq) -- node[anchor=south] {\bapqpcg} (vrrsbt1) ;
+        \draw [arrow] (p2bapq) -- node[anchor=north] {\bapqscg} (vrrsbt2) ;
 
         % Parent gender effects
-        \draw [->,dashed]
+        \draw [arrow,dashed]
             (p1gender) to
                 [bend right]
                 node[anchor=south] {\ns{\manpcg}}
             (vrrsbt1) ;
 
-        \draw [arrow,thick]
+        \draw [arrow]
             (p2gender) to
                 [bend left]
                 node[anchor=south] {\manscg}

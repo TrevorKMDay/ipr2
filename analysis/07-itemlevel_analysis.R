@@ -186,6 +186,7 @@ ggplot(cdi_items_by_category, aes(x = category, y = mean_agr_rate)) +
                       ymax = mean_agr_rate + se_agr_rate,
                       color = syntax, size = n)) +
   scale_size(range = c(0.25, 1.25)) +
+  scale_y_continuous(limits = c(0.7, 0.9)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -197,13 +198,13 @@ summary(freq_model)
 
 # range(cdi_items_nested$freq_log10[cdi_items_nested$syntax == "content"], na.rm = TRUE)
 # [1] -7.331893 -2.575176
-predict(freq_model, newdata = tibble(freq_log10 = c(-2, -3, -4, -5),
-                                     syntax = "content"))
+predict(freq_model,
+        newdata = tibble(freq_log10 = c(-2, -3, -4, -5), syntax = "content"))
 
 # range(cdi_items_nested$freq_log10[cdi_items_nested$syntax == "func"], na.rm = TRUE)
 # [1] -5.452863 -1.405184
-predict(freq_model, newdata = tibble(freq_log10 = c(-2, -3, -4, -5),
-                                     syntax = "func"))
+predict(freq_model,
+        newdata = tibble(freq_log10 = c(-2, -3, -4, -5), syntax = "func"))
 
 ggplot(cdi_items_nested, aes(x = freq_log10, y = agr_rate, color = syntax)) +
   geom_point() +
@@ -253,7 +254,7 @@ ggplot(cdi_categories, aes(x = mean_eer, y = mean_agr_rate)) +
 
 # vrrRSB ====
 
-reverse_items <- c(15, 16, 18:26, 28:34, 36, 37, 41:42, 47)
+reverse_items <- c(14, 17, 27, 35, 37:39, 42, 44:46, 48)
 
 vrrsb0 <- read_tsv("data/IPR_vrRSB-250127.tsv", show_col_types = FALSE) %>%
   filter(
@@ -282,13 +283,14 @@ vrrsb0 <- read_tsv("data/IPR_vrRSB-250127.tsv", show_col_types = FALSE) %>%
     value_factor = ordered(value_numeric)
 
   ) %>%
+  filter(
+    q_id < 50
+  ) %>%
   rename(
     id = PSCID,
     p1p2 = Visit_label
   ) %>%
-  filter(
-    q_id < 50
-  )
+  arrange(id, p1p2, q_id)
 
 vrrsb <- vrrsb0 %>%
   pivot_wider(id_cols = c(id, q_id, q_desc),
