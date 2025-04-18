@@ -10,25 +10,25 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes.geometric, arrows, calc}
 
-\newcommand{\cdicov}{$17\,342$}
+\newcommand{\cdicov}{$19\,670$}
 
-\newcommand{\cdiagepcg}{$20.6$}
-\newcommand{\cdiagescg}{$18.7$}
-\newcommand{\cdisexpcg}{$-37.5$}
-\newcommand{\cdisexscg}{$-37.5$}
-\newcommand{\cdibopcg}{$59.1$}
-\newcommand{\cdiboscg}{$38.9$}
-\newcommand{\cdivrspcg}{$-19.3$}
-\newcommand{\cdivrsscg}{$-23.5$}
+\newcommand{\cdiagepcg}{$23.7$}
+\newcommand{\cdisexpcg}{$-41.3$}
+\newcommand{\cdibopcg}{$73.5$}
+\newcommand{\cdivrspcg}{$-8.3$}
 
+\newcommand{\cdiagescg}{$23.2$}
+\newcommand{\cdisexscg}{$-45.2$}
+\newcommand{\cdiboscg}{$54.2$}
+\newcommand{\cdivrsscg}{$-9.1$}
 
 \newcommand{\bapqcov}{$0.05$}
 \newcommand{\gendercov}{$-0.2$}
 \newcommand{\educcov}{$0.32$}
 \newcommand{\tswccov}{$26.4$}
 
-\newcommand{\bapqpcg}{$-26.7$}
-\newcommand{\bapqscg}{$-2.7$}
+\newcommand{\bapqpcg}{$-22.5$}
+\newcommand{\bapqscg}{$-3.7$}
 
 % format: pcg/scg outcome~cov
 
@@ -41,6 +41,9 @@
 \newcommand{\scgedbapq}{$-3.89$}
 \newcommand{\scgtswcgender}{$-1.3$}
 \newcommand{\scgtswced}{$-0.07$}
+
+\newcommand{\vrrsbage}{$-0.8$}
+\newcommand{\vrrsbsex}{$2.0$}
 
 \newcommand{\ns}{\textsuperscript{n.s.}}
 
@@ -77,7 +80,8 @@
             {Age (mo)} ;
         \node (bo)  [child, left of=cdi1, node distance=4cm] {Birth order} ;
         \node (sex) [child, below of=age, node distance=1.5cm] {Sex (M)} ;
-        \node (vrs) [child, above of=bo, node distance=1.5cm] {Mean VRS} ;
+        \node (vrs) [child, above of=bo, node distance=1.5cm]
+            {Mean vrRSB\textsubscript{RSB}} ;
 
         % arrows
         \draw [dblarr] (cdi1) -- node[anchor=west] {\cdicov} (cdi2) ;
@@ -111,11 +115,11 @@
 
         \draw [arrow] (age) to
             [out=180,in=180]
-            node[anchor=west] {-0.49}
+            node[anchor=west] {\vrrsbage}
             (vrs) ;
         \draw [arrow] (sex) to
             [out=180,in=180]
-            node[anchor=east] {1.08}
+            node[anchor=east] {\vrrsbsex}
             (vrs) ;
 
 %        % PARENTS ====

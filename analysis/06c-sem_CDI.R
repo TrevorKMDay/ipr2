@@ -1,6 +1,8 @@
 library(tidyverse)
 library(lavaan)
 library(semTools)
+library(here)
+library(lavaanPlot)
 
 all_data <- read_rds(here("analysis", "sem_data.rds")) %>%
   mutate(
