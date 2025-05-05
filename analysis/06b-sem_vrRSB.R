@@ -335,7 +335,6 @@ vrrsbt_modelspec5 <- '
       p1a*p_man_pcg + p2a*p_edy_pcg + p3a*p_bapq_total_pcg_be + p4a*p_tswc_pcg +
       p6a*p_cgsschild_pcg
 
-
     vrrsb_total_scg ~ c1b*age + c2b*c_male + c3b*c_first_born +
       p1b*p_man_scg + p2b*p_edy_scg + p3b*p_bapq_total_scg_be + p4b*p_tswc_scg +
       p6b*p_cgsschild_pcg

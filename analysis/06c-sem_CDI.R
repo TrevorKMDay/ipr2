@@ -6,7 +6,10 @@ library(lavaanPlot)
 
 all_data <- read_rds(here("analysis", "sem_data.rds")) %>%
   mutate(
-    across(starts_with("cdi_total"), ~ . / 100)
+    across(starts_with("cdi_total"), ~ . / 100),
+    # Create one column with the expectation for their child's sex
+    p_cgsschild_pcg = if_else(c_male, p_cgssboys_pcg, p_cgssgirls_pcg),
+    p_cgsschild_scg = if_else(c_male, p_cgssboys_scg, p_cgssgirls_scg)
   )
 
 ## Initial model ====
@@ -178,3 +181,135 @@ ggplot(cdi_pe, aes(x = rhs)) +
   scale_shape_manual(values = c(21, 23)) +
   theme_bw() +
   labs(y = "Estimate", x = "Predictor")
+
+# Exploratory analyses ====
+
+cdi_modelspec3 <- '
+
+    cdi_total_pcg ~~ cdi_total_scg
+
+    cdi_total_pcg ~ c1a*age + c2a*c_male + c3a*c_first_born +
+        c4a*vrrsb_mean +
+      p1a*p_man_pcg + p2a*p_edy_pcg + p3a*p_bapq_total_pcg_be + p4a*p_tswc_pcg
+
+    cdi_total_scg ~ c1b*age + c2b*c_male + c3b*c_first_born +
+        c4b*vrrsb_mean +
+      p1b*p_man_scg + p2b*p_edy_scg + p3b*p_bapq_total_scg_be + p4b*p_tswc_scg
+
+    c_male ~ i1a*p_man_pcg
+    c_male ~ i1b*p_man_scg
+
+    vrrsb_mean ~ age + c_male + p_bapq_total_pcg_be + p_bapq_total_scg_be
+    vrrsb_mean ~ age + c_male + p_bapq_total_pcg_be + p_bapq_total_scg_be
+
+    # Covariances between parents
+    p_edy_pcg ~~ p_edy_scg
+    p_bapq_total_pcg_be ~~ p_bapq_total_scg_be
+    p_man_pcg ~~ p_man_scg
+    p_tswc_pcg ~~ p_tswc_scg
+
+    # Let educ/asd covary, est r=.17
+    p_edy_pcg ~ p_bapq_total_pcg_be
+    p_edy_scg ~ p_bapq_total_scg_be
+
+    # Let parent gender/asd covary, d=.37
+    p_man_pcg ~ p_bapq_total_pcg_be
+    p_man_scg ~ p_bapq_total_scg_be
+
+    p_tswc_pcg ~ p_man_pcg
+    p_tswc_scg ~ p_man_scg
+    p_edy_pcg ~ p_man_pcg
+    p_edy_scg ~ p_man_scg
+
+    # Set some covariances to 0
+    c_male ~~ 0*c_first_born
+    c_male ~~ 0*age
+    age ~~ 0*c_first_born
+
+    c1 := c1a - c1b
+    c2 := c2a - c2b
+    c3 := c3a - c3b
+    c4 := c4a - c4b
+
+    p1 := p1a - p1b
+    p2 := p2a - p2b
+    p3 := p3a - p3b
+    p4 := p4a - p4b
+
+    i1 := i1a - i1b
+
+  '
+
+cdi_model3 <- sem(cdi_modelspec3, data = all_data, missing = "ML")
+lavaanPlot(cdi_model3, coefs = TRUE, covs = TRUE, sig = .05)
+
+compareFit(cdi_model2, cdi_model3) %>%
+  summary()
+
+## CGSS ====
+
+cdi_modelspec4 <- '
+
+    cdi_total_pcg ~~ cdi_total_scg
+
+    cdi_total_pcg ~ c1a*age + c2a*c_male + c3a*c_first_born +
+        c4a*vrrsb_mean +
+      p1a*p_man_pcg + p2a*p_edy_pcg + p3a*p_bapq_total_pcg_be + p4a*p_tswc_pcg +
+      p6a*p_cgsschild_pcg
+
+    cdi_total_scg ~ c1b*age + c2b*c_male + c3b*c_first_born +
+        c4b*vrrsb_mean +
+      p1b*p_man_scg + p2b*p_edy_scg + p3b*p_bapq_total_scg_be + p4b*p_tswc_scg +
+      p6a*p_cgsschild_scg
+
+    c_male ~ i2a*p_cgsschild_pcg
+    c_male ~ i2b*p_cgsschild_scg
+
+    vrrsb_mean ~ age + c_male + p_bapq_total_pcg_be + p_bapq_total_scg_be
+    vrrsb_mean ~ age + c_male + p_bapq_total_pcg_be + p_bapq_total_scg_be
+
+    # Covariances between parents
+    p_edy_pcg ~~ p_edy_scg
+    p_bapq_total_pcg_be ~~ p_bapq_total_scg_be
+    p_man_pcg ~~ p_man_scg
+    p_tswc_pcg ~~ p_tswc_scg
+
+    # Let educ/asd covary, est r=.17
+    p_edy_pcg ~ p_bapq_total_pcg_be
+    p_edy_scg ~ p_bapq_total_scg_be
+
+    # Let parent gender/asd covary, d=.37
+    p_man_pcg ~ p_bapq_total_pcg_be
+    p_man_scg ~ p_bapq_total_scg_be
+
+    p_tswc_pcg ~ p_man_pcg
+    p_tswc_scg ~ p_man_scg
+    p_edy_pcg ~ p_man_pcg
+    p_edy_scg ~ p_man_scg
+
+    # Set some covariances to 0
+    c_male ~~ 0*c_first_born
+    c_male ~~ 0*age
+    age ~~ 0*c_first_born
+
+    c1 := c1a - c1b
+    c2 := c2a - c2b
+    c3 := c3a - c3b
+    c4 := c4a - c4b
+
+    p1 := p1a - p1b
+    p2 := p2a - p2b
+    p3 := p3a - p3b
+    p4 := p4a - p4b
+
+    i2 := i2a - i2b
+
+  '
+
+cdi_model4 <- sem(cdi_modelspec4, data = all_data, missing = "ML")
+lavaanPlot(cdi_model4, coefs = TRUE, covs = TRUE, sig = .05)
+
+compareFit(cdi_model2, cdi_model4) %>%
+  summary()
+
+summary(cdi_model4)
