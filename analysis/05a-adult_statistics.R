@@ -175,20 +175,18 @@ cgss <- read_delim(here("data", "IPR_demographics_extended-250204.tsv"),
 
     value_numeric = case_match(
       value,
-      "very_negative" ~ -3,
-      "somewhat_negative" ~ -2,
-      "slightly_negative" ~ -1,
-      "neutral" ~ 0,
-      "slightly_positive" ~ 1,
-      "somewhat_positive" ~ 2,
-      "very_positive"~ 3,
+      "very_negative" ~ 1,
+      "somewhat_negative" ~ 2,
+      "slightly_negative" ~ 3,
+      "neutral" ~ 4,
+      "slightly_positive" ~ 5,
+      "somewhat_positive" ~ 6,
+      "very_positive"~ 7,
       "not_answered" ~ NA,
     )
 
   ) %>%
   left_join(cgss_qs, by = join_by(item))
-
-write_rds(cgss, "analysis/cgss.rds")
 
 cgss_summary <- cgss %>%
   group_by(id, p1p2, scale) %>%
@@ -202,6 +200,9 @@ cgss_summary <- cgss %>%
   pivot_wider(id_cols = id, names_from = c(p1p2, scale),
               values_from = score) %>%
   ungroup()
+
+cgss_final <- list(items = cgss, summary = cgss_summary)
+write_rds(cgss_final, here("analysis", "cgss.rds"))
 
 library(corrr)
 

@@ -13,7 +13,12 @@ inclusions <- read_rds(here("analysis", "vrrsb_wide_included.rds"))$id
 
 demo_parents <- read_rds(here("analysis", "demo_parents.rds"))
 
+cgss <- read_rds(here("analysis", "cgss.rds"))$summary %>%
+  pivot_longer(-id, names_to = c("p1p2", "scale"), names_sep = "_") %>%
+  pivot_wider(names_from = scale, names_prefix = "p_cgss_")
+
 demo_parents_wide <- demo_parents %>%
+  left_join(cgss, by = join_by(id, p1p2)) %>%
   mutate(
     # Mean replace 3 missing values
     p_edy = replace_na(p_edy, round(mean(p_edy, na.rm = TRUE)))
@@ -24,14 +29,17 @@ demo_parents_wide <- demo_parents %>%
   pivot_wider(
     id_cols = c(id),
     names_from = p_pcg,
-    values_from = c(p_gender, p_edy, p_tswc)
+    values_from = c(p_gender, p_edy, p_tswc, starts_with("p_cgss_"))
   ) %>%
   mutate(
     p_man_pcg = p_gender_pcg == "man",
     p_man_scg = p_gender_scg == "man"
   ) %>%
-  select(id, starts_with("p_man"), starts_with("p_ed"), starts_with("p_tswc"))
+  select(id, starts_with("p_man_"), starts_with("p_edy_"),
+         starts_with("p_tswc"), starts_with("p_cgss_")) %>%
+  select_all(~str_replace(., "cgss_", "cgss"))
 
+# More missing cols from cgss
 demo_parents_wide[!complete.cases(demo_parents_wide), ]
 
 demo_parents_new <- demo_parents %>%

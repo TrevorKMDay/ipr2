@@ -4,7 +4,12 @@ library(lavaanPlot)
 library(semTools)
 library(here)
 
-all_data <- read_rds(here("analysis", "sem_data.rds"))
+all_data <- read_rds(here("analysis", "sem_data.rds")) %>%
+  mutate(
+    # Create one column with the expectation for their child's sex
+    p_cgsschild_pcg = if_else(c_male, p_cgssboys_pcg, p_cgssgirls_pcg),
+    p_cgsschild_scg = if_else(c_male, p_cgssboys_scg, p_cgssgirls_scg)
+  )
 
 # Initial model ====
 
@@ -65,7 +70,8 @@ modificationIndices(vrrsbt_model1, sort. = TRUE) %>%
     (str_detect(lhs, "pcg") & str_detect(rhs, "pcg")) |
       (str_detect(lhs, "scg") & str_detect(rhs, "scg")),
     # mi > 10vrrsbt_model3
-  )
+  ) %>%
+  head(10)
 
 # Model 2 ====
 
@@ -238,8 +244,18 @@ ggplot(pe, aes(x = rhs)) +
 
 all_data2 <- all_data %>%
   mutate(
-    pman_x_csex_pcg = p_man_pcg * c_male,
-    pman_x_csex_scg = p_man_scg * c_male
+    pman_x_csex_pcg = case_when(
+      p_man_pcg & c_male ~ "MM",
+      p_man_pcg & !c_male ~ "MF",
+      !p_man_pcg & c_male ~ "FM",
+      !p_man_pcg & !c_male ~ "FF",
+    ),
+    pman_x_csex_scg = case_when(
+      p_man_scg & c_male ~ "MM",
+      p_man_scg & !c_male ~ "MF",
+      !p_man_scg & c_male ~ "FM",
+      !p_man_scg & !c_male ~ "FF",
+    ),
   )
 
 vrrsbt_modelspec4 <- '
@@ -247,72 +263,10 @@ vrrsbt_modelspec4 <- '
     vrrsb_total_pcg ~~ vrrsb_total_scg
 
     vrrsb_total_pcg ~ c1a*age + c2a*c_male + c3a*c_first_born +
-      p1a*p_man_pcg + p2a*p_edy_pcg + p3a*p_bapq_total_pcg_be + p4a*p_tswc_pcg +
-      p5a*pman_x_csex_pcg
-
-    vrrsb_total_scg ~ c1b*age + c2b*c_male + c3b*c_first_born +
-      p1b*p_man_scg + p2b*p_edy_scg + p3b*p_bapq_total_scg_be + p4b*p_tswc_scg +
-      p5b*pman_x_csex_scg
-
-    # Set some covariances to 0
-    c_male ~~ 0*c_first_born
-    c_male ~~ 0*age
-    age ~~ 0*c_first_born
-
-    # Covariances between parents
-    p_edy_pcg ~~ p_edy_scg
-    p_bapq_total_pcg_be ~~ p_bapq_total_scg_be
-    p_man_pcg ~~ p_man_scg
-    p_tswc_pcg ~~ p_tswc_scg
-
-    p_tswc_pcg ~ p_man_pcg + p_edy_pcg
-    p_tswc_scg ~ p_man_scg + p_edy_scg
-    p_edy_pcg ~ p_man_pcg + p_bapq_total_pcg_be
-    p_edy_scg ~ p_man_scg + p_bapq_total_scg_be
-
-    # Let educ/asd covary, est r=.17
-    p_edy_pcg ~~ p_bapq_total_pcg_be
-    p_edy_scg ~~ p_bapq_total_scg_be
-
-    # Let parent gender/asd covary, d=.37
-    p_man_pcg ~~ p_bapq_total_pcg_be
-    p_man_scg ~~ p_bapq_total_scg_be
-
-    # Test if there is a difference between paths
-    # https://www.regorz-statistik.de/blog/lavaan_path_comparison.html
-
-    c1 := c1a - c1b
-    c2 := c2a - c2b
-    c3 := c3a - c3b
-
-    p1 := p1a - p1b
-    p2 := p2a - p2b
-    p3 := p3a - p3b
-    p4 := p4a - p4b
-    p5 := p5a - p5b
-
-  '
-
-vrrsbt_model4 <- sem(vrrsbt_modelspec4, data = all_data2, missing = "ML")
-lavaanPlot(vrrsbt_model4, coefs = TRUE, covs = TRUE, sig = .05)
-
-vrs_model_comparison <- compareFit(vrrsbt_model1, vrrsbt_model2, vrrsbt_model3,
-                                   vrrsbt_model4, nested = TRUE)
-
-modificationindices(vrrsbt_model4, sort. = TRUE) %>%
-  head(10)
-
-# This does not improve the model - all fit statistics are worse, and the MIs
-#   for the new paths are really high
-
-## CGSS ====
-
-vrrsbt_modelspec4 <- '
-
-    vrrsb_total_pcg ~~ vrrsb_total_scg
-
-    vrrsb_total_pcg ~ c1a*age + c2a*c_male + c3a*c_first_born +
       p1a*p_man_pcg + p2a*p_edy_pcg + p3a*p_bapq_total_pcg_be + p4a*p_tswc_pcg
+
+    c_male ~ i1a*p_man_pcg
+    c_male ~ i1b*p_man_scg
 
     vrrsb_total_scg ~ c1b*age + c2b*c_male + c3b*c_first_born +
       p1b*p_man_scg + p2b*p_edy_scg + p3b*p_bapq_total_scg_be + p4b*p_tswc_scg
@@ -344,15 +298,96 @@ vrrsbt_modelspec4 <- '
     # Test if there is a difference between paths
     # https://www.regorz-statistik.de/blog/lavaan_path_comparison.html
 
-    c1 := c1a - c1b
-    c2 := c2a - c2b
-    c3 := c3a - c3b
+    c1 := c1a - c1b # age
+    c2 := c2a - c2b # sex
+    c3 := c3a - c3b # bo
 
-    p1 := p1a - p1b
-    p2 := p2a - p2b
-    p3 := p3a - p3b
-    p4 := p4a - p4b
+    p1 := p1a - p1b # gender
+    p2 := p2a - p2b # educ
+    p3 := p3a - p3b # bapq
+    p4 := p4a - p4b # tswc
+
+    # parent sex by child gender inetraction
+    i1 := i1a - i1b
 
   '
 
-cgss <- read_rds("analysis/demo_parents.rds")
+vrrsbt_model4 <- sem(vrrsbt_modelspec4, data = all_data2, missing = "ML")
+lavaanPlot(vrrsbt_model4, coefs = TRUE, covs = TRUE, sig = .05)
+
+vrs_model_comparison <- compareFit(vrrsbt_model3, vrrsbt_model4, nested = TRUE)
+
+modificationindices(vrrsbt_model4, sort. = TRUE) %>%
+  head(10)
+
+# This does not improve the model - all fit statistics are worse, and the MIs
+#   for the new paths are really high
+
+## CGSS ====
+
+vrrsbt_modelspec5 <- '
+
+    vrrsb_total_pcg ~~ vrrsb_total_scg
+
+    # Use p6 as the prefix because p5 was used for the interaction term
+
+    vrrsb_total_pcg ~ c1a*age + c2a*c_male + c3a*c_first_born +
+      p1a*p_man_pcg + p2a*p_edy_pcg + p3a*p_bapq_total_pcg_be + p4a*p_tswc_pcg +
+      p6a*p_cgsschild_pcg
+
+
+    vrrsb_total_scg ~ c1b*age + c2b*c_male + c3b*c_first_born +
+      p1b*p_man_scg + p2b*p_edy_scg + p3b*p_bapq_total_scg_be + p4b*p_tswc_scg +
+      p6b*p_cgsschild_pcg
+
+    c_male ~ i2a*p_cgsschild_pcg
+    c_male ~ i2b*p_cgsschild_scg
+
+    # Set some covariances to 0
+    c_male ~~ 0*c_first_born
+    c_male ~~ 0*age
+    age ~~ 0*c_first_born
+
+    # Covariances between parents
+    p_edy_pcg ~~ p_edy_scg
+    p_bapq_total_pcg_be ~~ p_bapq_total_scg_be
+    p_man_pcg ~~ p_man_scg
+    p_tswc_pcg ~~ p_tswc_scg
+
+    p_tswc_pcg ~ p_man_pcg + p_edy_pcg
+    p_tswc_scg ~ p_man_scg + p_edy_scg
+    p_edy_pcg ~ p_man_pcg + p_bapq_total_pcg_be
+    p_edy_scg ~ p_man_scg + p_bapq_total_scg_be
+
+    # Let educ/asd covary, est r=.17
+    p_edy_pcg ~~ p_bapq_total_pcg_be
+    p_edy_scg ~~ p_bapq_total_scg_be
+
+    # Let parent gender/asd covary, d=.37
+    p_man_pcg ~~ p_bapq_total_pcg_be
+    p_man_scg ~~ p_bapq_total_scg_be
+
+    # Test if there is a difference between paths
+    # https://www.regorz-statistik.de/blog/lavaan_path_comparison.html
+
+    c1 := c1a - c1b # age
+    c2 := c2a - c2b # sex
+    c3 := c3a - c3b # bo
+
+    p1 := p1a - p1b # gender
+    p2 := p2a - p2b # educ
+    p3 := p3a - p3b # bapq
+    p4 := p4a - p4b # tswc
+    p6 := p6a - p6b # CGSS
+
+    # Use i2 for CGSS term
+    i2 := i2a - i2b
+
+  '
+
+vrrsbt_model5 <- sem(vrrsbt_modelspec5, data = all_data, missing = "ML")
+lavaanPlot(vrrsbt_model5, coefs = TRUE, covs = TRUE, sig = .05)
+
+vrs_model_comparison <- compareFit(vrrsbt_model3,vrrsbt_model5, nested = TRUE)
+
+# Adding these terms improve A/BIC, but none of the other fit indices
