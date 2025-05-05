@@ -1,6 +1,8 @@
 library(tidyverse)
 library(here)
 
+summarize <- dplyr::summarize
+
 # Load data
 
 inclusions <- read_rds(here("analysis", "vrrsb_wide_included.rds"))$id
@@ -127,38 +129,47 @@ ggplot(adults, aes(x = p_edy, y = bapq_totalbest, color = p_gender)) +
 # CGSS ====
 
 cgss_qs <- tribble(
-  ~name, ~scale,
-  "ballet", "girls",
-  "room", "home",
-  "laundry", "home",
-  "garbage", "home",
-  "football", "boys",
-  "military_toys", "boys",
-  "kitchen_toys", "girls",
-  "gun_toys", "boys",
-  "jewelry_toys", "girls",
-  "dishes_toys", "girls",
-  "tools_toys", "boys",
-  "sweeping", "home",
-  "grass", "home",
-  "set_table", "home",
-  "nurse_toys", "girls",
-  "hopscotch", "girls",
-  "gi_joes", "boys",
-  "truck_toys", "boys",
-  "barbie_dolls", "girls",
-  "dishes", "home",
-  "baby_dolls", "girls",
-  "car_toys", "boys",
-) %>%
+    ~name, ~scale,
+    "ballet", "girls",
+    "room", "home",
+    "laundry", "home",
+    "garbage", "home",
+    "football", "boys",
+    "military_toys", "boys",
+    "kitchen_toys", "girls",
+    "gun_toys", "boys",
+    "jewelry_toys", "girls",
+    "dishes_toys", "girls",
+    "tools_toys", "boys",
+    "sweeping", "home",
+    "grass", "home",
+    "set_table", "home",
+    "nurse_toys", "girls",
+    "hopscotch", "girls",
+    "gi_joes", "boys",
+    "truck_toys", "boys",
+    "barbie_dolls", "girls",
+    "dishes", "home",
+    "baby_dolls", "girls",
+    "car_toys", "boys",
+  ) %>%
   mutate(
     item = row_number()
   )
 
-cgss <- demo2 %>%
+cgss <- read_delim(here("data", "IPR_demographics_extended-250204.tsv"),
+                            delim = "\t", show_col_types = FALSE) %>%
+  rename(
+    id = PSCID,
+    p1p2 = Visit_label,
+  ) %>%
+  filter(
+    id %in% inclusions
+  ) %>%
   select(id, p1p2, contains("CGSS")) %>%
   pivot_longer(starts_with("q"), names_to = "item") %>%
   mutate(
+
     item = str_remove_all(item, "[^0-9]") %>%
       as.numeric(),
 
@@ -177,6 +188,8 @@ cgss <- demo2 %>%
   ) %>%
   left_join(cgss_qs, by = join_by(item))
 
+write_rds(cgss, "analysis/cgss.rds")
+
 cgss_summary <- cgss %>%
   group_by(id, p1p2, scale) %>%
   summarize(
@@ -186,14 +199,17 @@ cgss_summary <- cgss %>%
   mutate(
     score = if_else(n_nonNA < 4, NA, score)
   ) %>%
-  pivot_wider(id_cols = id, names_from = c(p1p2, scale), values_from = score)
+  pivot_wider(id_cols = id, names_from = c(p1p2, scale),
+              values_from = score) %>%
+  ungroup()
 
 library(corrr)
 
 cgss_cors_rnp <- cgss_summary %>%
   ungroup() %>%
   select(-id) %>%
-  as.matrix()
+  as.matrix() %>%
+  Hmisc::rcorr()
 
 cgss_cors <- cgss_cors_rnp$r %>%
   as_cordf() %>%

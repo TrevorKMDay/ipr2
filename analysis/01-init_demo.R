@@ -369,12 +369,42 @@ tswc_corrs <- tswc2 %>%
   as.matrix() %>%
   rcorr()
 
-corrplot(tswc_corrs$r, method = "color",
-         addCoef.col = "black", number.digits = 2,
-         p.mat = tswc_corrs$P, insig = "blank")
+# corrplot(tswc_corrs$r, method = "color",
+#          addCoef.col = "black", number.digits = 2,
+#          p.mat = tswc_corrs$P, insig = "blank")
 
 demo2_pcg <- demo2_tswc %>%
   select(id, p1p2, pcg, meboth_TSWC)
+
+# CGSS
+
+demo2_cgss <- demo2 %>%
+  select(id, p1p2, ends_with("CGSS")) %>%
+  pivot_longer(-c(id, p1p2), names_to = "q_id") %>%
+  mutate(
+
+    q_id = as.numeric(str_remove_all(q_id, "[^0-9]")),
+
+    subscale = case_match(
+      q_id,
+      c() ~ "girls",
+      c() ~ "boys",
+      c() ~ "home"
+    )
+
+    value = case_match(
+      value,
+      "very_negative" ~ 1,
+      "somewhat_negative" ~ 2,
+      "slightly_negative" ~ 3,
+      "neutral" ~ 4,
+      "very_positive" ~ 5,
+      "somewhat_positive" ~ 6,
+      "slightly_positive" ~ 7,
+      "not_answered" ~ NA
+    ),
+
+  )
 
 # Save final results ====
 

@@ -309,9 +309,13 @@ vrrsb_kappa <- vrrsb %>%
   mutate(
     value = c("k", "lwr.ci", "upr.ci"),
     label = str_replace_all(q_desc, "_", " "),
-    across(where(is.numeric), ~round(.x, 3))
+    across(where(is.numeric), ~round(.x, 3)),
+    vr = q_id <= 13
   ) %>%
   pivot_wider(names_from = value, values_from = kappa)
+
+# Are VR items different from non-VR items?
+t.test(vrrsb_kappa$k[vrrsb_kappa$vr], vrrsb_kappa$k[!vrrsb_kappa$vr])
 
 png("plots/vrrsb_kappa.png", width = 6.5, height = 6.5, units = "in", res = 300)
 
@@ -328,5 +332,4 @@ ggplot(vrrsb_kappa, aes(x = k, y = q_id)) +
 dev.off()
 
 vrrsb_kappa_ordered <- vrrsb_kappa %>%
-  arrange(desc(k))
-vr
+  arrange(desc(k))\
