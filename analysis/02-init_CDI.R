@@ -64,7 +64,8 @@ ws_IIBC_icc <- ws_IIBC %>%
   )
 
 ws_wide <- ws %>%
-  pivot_wider(id_cols = id, names_from = p_pcg, values_from = c(-id, -p_pcg)) %>%
+  pivot_wider(id_cols = id, names_from = p_pcg,
+              values_from = c(-id, -p_pcg)) %>%
   filter(
     !is.na(words_produced_number_pcg),
     !is.na(words_produced_number_scg)

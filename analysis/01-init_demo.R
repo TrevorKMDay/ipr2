@@ -390,7 +390,7 @@ demo2_cgss <- demo2 %>%
       c() ~ "girls",
       c() ~ "boys",
       c() ~ "home"
-    )
+    ),
 
     value = case_match(
       value,

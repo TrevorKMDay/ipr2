@@ -48,8 +48,13 @@ vrrsb3 <- vrrsb2 %>%
   pivot_wider(names_from = pcg) %>%
   group_by(name) %>%
   mutate(
-    across(c(pcg, scg), ~scale(.x)[,1], .names = "{.col}_Z")
+    across(c(pcg, scg), ~scale(.x)[,1], .names = "{.col}_Z"),
+    diff = abs(pcg - scg)
   )
+
+mean(vrrsb3$diff[vrrsb3$name == "total" & !vrrsb3$outlier])
+
+lm(vrrsb2$total_pcg ~ age, data = vrrsb2)
 
 ggplot(vrrsb3, aes(x = pcg, y = scg, color = age)) +
   geom_jitter(alpha = 0.5, height = 0.2, width = 0.2) +

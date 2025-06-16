@@ -15,7 +15,6 @@ vrrsb <- read_rds(here("analysis", "vrrsb_wide_included.rds")) %>%
 t.test(cdi$cdi_total_pcg, cdi$cdi_total_scg, paired = TRUE)
 t.test(vrrsb$vrrsb_total_pcg, vrrsb$vrrsb_total_scg, paired = TRUE)
 
-
 # Combine ====
 
 child_rows <- full_join(cdi, vrrsb, by = join_by(id),

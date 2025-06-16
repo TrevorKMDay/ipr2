@@ -40,6 +40,9 @@ demo_parents_wide <- demo_parents %>%
 
 bapq <- read_rds(here("analysis", "bapq_wide_all.rds")) %>%
   select(id, starts_with("total")) %>%
+  filter(
+    id %in% inclusions
+  ) %>%
   rowwise() %>%
   mutate(
 
@@ -49,6 +52,8 @@ bapq <- read_rds(here("analysis", "bapq_wide_all.rds")) %>%
     bapq_missing_iprParent2 =
       is.na(total_self_iprParent2) | is.na(total_partner_iprParent1),
 
+    bapq_missing = bapq_missing_iprParent1 |  bapq_missing_iprParent2,
+
     # Calculate best estimates
     bapq_totalbest_iprParent1 =
       mean(c(total_self_iprParent1, total_partner_iprParent2), na.rm = TRUE),
@@ -57,13 +62,71 @@ bapq <- read_rds(here("analysis", "bapq_wide_all.rds")) %>%
 
   )
 
-bapq2 <- select(bapq, id, contains("best")) %>%
-  pivot_longer(-id, values_to = "bapq_totalbest", names_to = "p1p2") %>%
+bapq2 <- bapq %>%
+  select(id, bapq_missing, contains("best")) %>%
+  pivot_longer(starts_with("bapq_totalbest"), values_to = "bapq_totalbest") %>%
   mutate(
-    p1p2 = str_remove(p1p2, "bapq_totalbest_")
+    name = str_remove(name, "bapq_totalbest_")
+  ) %>%
+  left_join(
+    select(demo_parents, id, p1p2, p_pcg),
+    by = join_by(id, name == p1p2),
+    relationship = "one-to-one"
+  ) %>%
+  pivot_longer(starts_with("bapq_totalbest"), values_to = "bapq_totalbest",
+               names_to = "cg") %>%
+  select(id, bapq_missing, p_pcg, bapq_totalbest)
+
+## Assortative mating ====
+
+bapq3 <- bapq2 %>%
+  pivot_wider(id_cols = c(id, bapq_missing), names_from = p_pcg,
+              values_from = bapq_totalbest)
+
+assort_mating <- bapq3 %>%
+  filter(
+    !bapq_missing
+  ) %>%
+  select(pcg, scg) %>%
+  as.matrix() %>%
+  Hmisc::rcorr()
+
+## self vs partner ====
+
+self_v_partner <- bapq %>%
+  filter(
+    !bapq_missing
+  ) %>%
+  select(id, starts_with("total")) %>%
+  pivot_longer(-id, names_to = c(NA, "who", "p1p2"), names_sep = "_",
+               values_to = "bapq_tstar") %>%
+  left_join(
+    select(demo_parents, id, p1p2, p_pcg),
+    by = join_by(id, p1p2),
+  ) %>%
+  select(-p1p2) %>%
+  pivot_wider(names_from = c(p_pcg, who), values_from = "bapq_tstar")
+
+pcg_rcorr <- Hmisc::rcorr(self_v_partner$pcg_self, self_v_partner$scg_partner)
+scg_rcorr <- Hmisc::rcorr(self_v_partner$scg_self, self_v_partner$pcg_partner)
+
+self_v_partner_corr <- self_v_partner %>%
+  select(self, p_pcg, partner) %>%
+  group_by(p_pcg)  %>%
+  nest() %>%
+  mutate(
+    rcorr = map(data, ~Hmisc::rcorr(as.matrix(select(.x, self, partner))))
   )
 
-adults <- left_join(demo_parents, bapq2, by = join_by(id, p1p2)) %>%
+ggplot(self_v_partner, aes(x = self, y = partner, color = p_pcg)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  coord_equal() +
+  theme_bw()
+
+# Analyses ====
+
+adults <- left_join(demo_parents, bapq2, by = join_by(id, p_pcg)) %>%
   mutate(
     p_ed = replace_na(p_ed, "college"),
     p_edy = as.numeric(as.character(p_edy, 16))
@@ -73,16 +136,6 @@ adults <- left_join(demo_parents, bapq2, by = join_by(id, p1p2)) %>%
 adults[!complete.cases(adults), ]
 
 table(adults$bapq_totalbest >= 3.15)
-
-adults %>%
-  mutate(
-    high_bapq = bapq_totalbest >= 3.15
-  ) %>%
-  pivot_wider(values_from = high_bapq, names_from = p1p2, id_cols = id) %>%
-  summarize(
-    n = n(),
-    .by = c(-id)
-  )
 
 bapq_model <- lm(bapq_totalbest ~ p_gender_man + p_gender_nonbinary +
                    p_gender_transwoman +
@@ -110,7 +163,8 @@ adults_bapqmean <- adults %>%
     p_ed != "some_high"
   )
 
-ggplot(adults, aes(x = p_edy, y = bapq_totalbest, color = p_gender)) +
+ggplot(filter(adults, p_gender %in% c("man", "woman")),
+       aes(x = p_edy, y = bapq_totalbest, color = p_gender)) +
   geom_jitter(width = 0.25, height = 0, alpha = 0.5) +
   geom_errorbar(data = adults_bapqmean,
                 aes(x = p_edy, y = mean_bapq, ymin = mean_bapq - se_bapq,

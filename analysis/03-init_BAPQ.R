@@ -33,10 +33,6 @@ bapq_wide <- bapq %>%
 
 write_rds(bapq_wide, "bapq_wide_all.rds")
 
-bapq_included <- bapq_wide %>%
-  filter(
-
-  )
 
 bapq_complete <- bapq_wide %>%
   filter(
