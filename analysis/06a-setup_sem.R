@@ -129,6 +129,7 @@ all_data <- demo_child %>%
 all_data[!complete.cases(all_data), ]
 
 write_rds(all_data, "analysis/sem_data.rds")
+write_csv(all_data, "analysis/sem_data.csv")
 
 cor(all_data$nwords_pcg, all_data$cdi_total_pcg)
 cor(all_data$nwords_scg, all_data$cdi_total_scg)
