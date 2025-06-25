@@ -1,7 +1,8 @@
 # Inter-rater parent reliability
 
 Trevor K.M. Day, Meghan Swanson, Jed T. Elison
-Code: Trevor K.M. Day
+
+Code: Trevor K.M. Day (trevor.day@georgetown.edu)
 
 For more information and shared data, see the [OSF project](https://osf.io/eh9dr/)
 (Day, Lamm & Elison, 2023).
@@ -24,6 +25,12 @@ what factors influence (1) how many words parents report their child knows; and
 ## Preprint
 
 The preprinted manuscript can be found at: 
+
+## Funding
+
+This project was supported by the University of Minnesota Institute of Child Development,
+NSF GRF #2020295366 (TKMD), NIH #T32DC019481 (TKMD). 
+
 
 ## References
 
