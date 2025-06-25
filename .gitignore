@@ -5,3 +5,12 @@
 
 **.log
 **.synctex.gz
+
+analysis/*.rds
+analysis/*.xlsx
+analysis/*.csv
+
+plots/
+
+shared/*.csv
+shared/*.xlsx
