@@ -14,3 +14,8 @@ plots/
 
 shared/*.csv
 shared/*.xlsx
+
+**.rds
+
+data/
+dicts/
