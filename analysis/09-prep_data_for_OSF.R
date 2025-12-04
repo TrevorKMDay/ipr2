@@ -78,8 +78,6 @@ demo_parents <- demo1 %>%
 
 demo_final <- left_join(demo_child, demo_parents)
 
-write_csv(demo_final, "shared/demographics_shared.csv")
-
 # CDI ====
 
 model <- read_csv("analysis/wordbank_model.csv")
@@ -172,51 +170,5 @@ ws_items2 <- ws_items %>%
   left_join(
     select(model1, item_id, item_definition)
   ) %>%
-  select(p1p2, CandID, item_kind, category, item_id, item_definition, value) %>%
-  arrange(CandID, p1p2)
+  select(p1p2, CandID, item_kind, category, item_id, item_definition, value)
 
-write_csv(ws_items2, "shared/cdi_shared.csv")
-
-# vrRSB ====
-
-vrrsb <- read_tsv("data/IPR_vrRSB-250127.tsv", show_col_types = FALSE) %>%
-  select(Visit_label, CandID, ends_with("score"), ends_with("items"),
-         starts_with("q_"), -ends_with("status"), -q_51_sophisticated_sentence,
-         -q_50_num_words_nda) %>%
-  filter(
-    CandID %in% demo_final$CandID
-  ) %>%
-  rename(
-    p1p2 = Visit_label,
-    VRS = video_reference_score,
-    RSB = RSB_total_score,
-    SCS = social_communicative_items,
-    RRS = restricted_repetitive_items
-  ) %>%
-  mutate(
-    across(c(VRS, RSB, SCS, RRS, q_50_num_words), as.numeric)
-  ) %>%
-  arrange(CandID, p1p2)
-
-write_csv(vrrsb, "shared/vrrsb_shared.csv")
-
-# BAPQ ====
-
-bapq <- read_tsv("data/IPR_BAPQ-250128.tsv", show_col_types = FALSE) %>%
-  select(Visit_label, CandID, ends_with("self"), ends_with("partner")) %>%
-  filter(
-    CandID %in% demo_final$CandID
-  ) %>%
-  mutate(
-    across(-c(Visit_label, CandID), as.numeric)
-  ) %>%
-  pivot_longer(-c(Visit_label, CandID)) %>%
-  mutate(
-    target = str_extract(name, "(self|partner)$"),
-    name = str_remove(name, "_(self|partner)$")
-  ) %>%
-  pivot_wider() %>%
-  rename(
-    plang_score = pragmatic_language_score
-  ) %>%
-  arrange(CandID, p1p2, target)

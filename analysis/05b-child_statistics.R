@@ -12,8 +12,13 @@ vrrsb <- read_rds(here("analysis", "vrrsb_wide_included.rds")) %>%
   select(id, age, everything(), -starts_with("age_p")) %>%
   rename_with(~paste0("vrrsb_", .x), -c(id, age))
 
-t.test(cdi$cdi_total_pcg, cdi$cdi_total_scg, paired = TRUE)
-t.test(vrrsb$vrrsb_total_pcg, vrrsb$vrrsb_total_scg, paired = TRUE)
+cdi_ttest <- t.test(cdi$cdi_total_pcg, cdi$cdi_total_scg, paired = TRUE)
+vrrsb_ttest <- t.test(vrrsb$vrrsb_total_pcg, vrrsb$vrrsb_total_scg,
+                      paired = TRUE)
+
+esc::esc_t(cdi_ttest$statistic, cdi_ttest$p.value, grp1n = 300, grp2n = 300)
+esc::esc_t(vrrsb_ttest$statistic, vrrsb_ttest$p.value, grp1n = 300,
+           grp2n = 300)
 
 # Combine ====
 
@@ -124,9 +129,10 @@ vrrsb2 <- ggplot(filter(child_long, inst == "vrrsb", score == "total"),
 plot2_child <- cdi2 + vrrsb2 +
   plot_layout(guides = "collect", axes = "collect")
 
-png(here("plots", "child_plot_poster.png"), width = 20, height = 9, units = "in",
-    res = 300)
+png(here("plots", "child_plot_poster.png"), width = 20, height = 9,
+    units = "in", res = 300)
 
 print(plot2_child)
 
 dev.off()
+

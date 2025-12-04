@@ -110,19 +110,19 @@ self_v_partner <- bapq %>%
 pcg_rcorr <- Hmisc::rcorr(self_v_partner$pcg_self, self_v_partner$scg_partner)
 scg_rcorr <- Hmisc::rcorr(self_v_partner$scg_self, self_v_partner$pcg_partner)
 
-self_v_partner_corr <- self_v_partner %>%
-  select(self, p_pcg, partner) %>%
-  group_by(p_pcg)  %>%
-  nest() %>%
-  mutate(
-    rcorr = map(data, ~Hmisc::rcorr(as.matrix(select(.x, self, partner))))
-  )
-
-ggplot(self_v_partner, aes(x = self, y = partner, color = p_pcg)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  coord_equal() +
-  theme_bw()
+# self_v_partner_corr <- self_v_partner %>%
+#   select(self, p_pcg, partner) %>%
+#   group_by(p_pcg)  %>%
+#   nest() %>%
+#   mutate(
+#     rcorr = map(data, ~Hmisc::rcorr(as.matrix(select(.x, self, partner))))
+#   )
+#
+# ggplot(self_v_partner, aes(x = self, y = partner, color = p_pcg)) +
+#   geom_point() +
+#   geom_smooth(method = "lm") +
+#   coord_equal() +
+#   theme_bw()
 
 # Analyses ====
 
@@ -144,6 +144,8 @@ bapq_model <- lm(bapq_totalbest ~ p_gender_man + p_gender_nonbinary +
                  data = adults)
 
 summary(bapq_model)
+
+summary(lm.beta::lm.beta(bapq_model))
 
 adults_bapqmean <- adults %>%
   filter(

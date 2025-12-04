@@ -194,7 +194,9 @@ lm(mean_agr_rate ~ n + syntax, data = cdi_items_by_category) %>%
   summary()
 
 freq_model <- lm(agr_rate ~ freq_log10*syntax, data = cdi_items_nested)
+
 summary(freq_model)
+summary(lm.beta(freq_model))
 
 # range(cdi_items_nested$freq_log10[cdi_items_nested$syntax == "content"], na.rm = TRUE)
 # [1] -7.331893 -2.575176
@@ -332,4 +334,4 @@ ggplot(vrrsb_kappa, aes(x = k, y = q_id)) +
 dev.off()
 
 vrrsb_kappa_ordered <- vrrsb_kappa %>%
-  arrange(desc(k))\
+  arrange(desc(k))

@@ -4,6 +4,21 @@ library(lavaanPlot)
 library(semTools)
 library(here)
 
+show_params_std <- function(lvn) {
+
+  pe1 <- parameterEstimates(lvn) %>%
+    select(lhs, op, rhs, label, est, pvalue)
+
+  se1 <- standardizedSolution(lvn) %>%
+    select(lhs, op, rhs, label, est.std, pvalue)
+
+  result <- left_join(pe1, se1, join_by(lhs, op, rhs, label),
+                      suffix = c("_raw", "_std"))
+
+  return(result)
+
+}
+
 all_data <- read_rds(here("analysis", "sem_data.rds")) %>%
   mutate(
     # Create one column with the expectation for their child's sex
@@ -60,6 +75,8 @@ vrrsbt_model1 <- sem(vrrsbt_modelspec1, data = all_data, missing = "ML")
 lavaanPlot(vrrsbt_model1, coefs = TRUE, covs = TRUE, sig = .05)
 
 summary(vrrsbt_model1)
+
+
 
 modificationIndices(vrrsbt_model1, sort. = TRUE) %>%
   mutate(
@@ -222,6 +239,8 @@ pe <- parameterestimates(vrrsbt_model3) %>%
 
   )
 
+show_params_std(vrrsbt_model3)
+
 ggplot(pe, aes(x = rhs)) +
   geom_pointrange(aes(y = est, ymin = ci.lower, ymax = ci.upper,
                       fill = parent, linetype = parent, shape = parent),
@@ -307,7 +326,7 @@ vrrsbt_modelspec4 <- '
     p3 := p3a - p3b # bapq
     p4 := p4a - p4b # tswc
 
-    # parent sex by child gender inetraction
+    # parent sex by child gender interaction
     i1 := i1a - i1b
 
   '

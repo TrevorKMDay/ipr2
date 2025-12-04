@@ -4,6 +4,21 @@ library(semTools)
 library(here)
 library(lavaanPlot)
 
+show_params_std <- function(lvn) {
+
+  pe1 <- parameterEstimates(lvn) %>%
+    select(lhs, op, rhs, label, est, pvalue)
+
+  se1 <- standardizedSolution(lvn) %>%
+    select(lhs, op, rhs, label, est.std, pvalue)
+
+  result <- left_join(pe1, se1, join_by(lhs, op, rhs, label),
+                      suffix = c("_raw", "_std"))
+
+  return(result)
+
+}
+
 all_data <- read_rds(here("analysis", "sem_data.rds")) %>%
   mutate(
     across(starts_with("cdi_total"), ~ . / 100),
@@ -181,6 +196,8 @@ ggplot(cdi_pe, aes(x = rhs)) +
   scale_shape_manual(values = c(21, 23)) +
   theme_bw() +
   labs(y = "Estimate", x = "Predictor")
+
+show_params_std(cdi_model2)
 
 # Exploratory analyses ====
 

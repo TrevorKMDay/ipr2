@@ -128,8 +128,8 @@ all_data <- demo_child %>%
 # Just missing first-born status
 all_data[!complete.cases(all_data), ]
 
-write_rds(all_data, "analysis/sem_data.rds")
-write_csv(all_data, "analysis/sem_data.csv")
+write_rds(all_data, here("analysis", "sem_data.rds"))
+write_csv(all_data, here("analysis", "sem_data.csv"))
 
 cor(all_data$nwords_pcg, all_data$cdi_total_pcg)
 cor(all_data$nwords_scg, all_data$cdi_total_scg)
@@ -193,17 +193,32 @@ ggplot(all_diffs_long, aes(x = tswc_diff, y = abs(value))) +
   facet_wrap(vars(name), scales = "free") +
   theme_bw()
 
-lm(cdi_diff ~ tswc_diff + age + c_male + c_first_born, data = all_diffs) %>%
-  summary()
+## Models ====
 
-lm(vrrsb_diff ~ tswc_diff + age + c_male, data = all_diffs) %>%
-  summary()
+library(lm.beta)
 
-lm(abs(cdi_diff) ~ abs(tswc_diff) + age + c_male + c_first_born, data = all_diffs) %>%
-  summary()
+cdi_diff_lm <- lm(cdi_diff ~ tswc_diff + age + c_male + c_first_born,
+                  data = all_diffs) %>%
+  lm.beta()
 
-lm(abs(vrrsb_diff) ~ abs(tswc_diff) + age + c_male, data = all_diffs) %>%
-  summary()
+summary(cdi_diff_lm)
+
+vrrsb_diff_lm <- lm(vrrsb_diff ~ tswc_diff + age + c_male, data = all_diffs) %>%
+  lm.beta()
+
+summary(vrrsb_diff_lm)
+
+cdi_lm <- lm(abs(cdi_diff) ~ abs(tswc_diff) + age + c_male + c_first_born,
+              data = all_diffs) %>%
+  lm.beta()
+
+summary(cdi_lm)
+
+vrrsb_lm <- lm(abs(vrrsb_diff) ~ abs(tswc_diff) + age + c_male,
+               data = all_diffs) %>%
+  lm.beta()
+
+summary(vrrsb_lm)
 
 ggplot(all_diffs_long, aes(x = age, y = value)) +
   geom_point(alpha = 0.5) +
