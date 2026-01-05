@@ -308,3 +308,8 @@ ggplot(cgss_cors_final, aes(x = x, y = y, fill = r)) +
   theme_bw() +
   labs(x = NULL, y = NULL,
        caption = "* p < .05 after FDR correction")
+
+# Bland-Altman =====
+
+bld <- adults %>%
+  select(id, p_pcg, bapq_totalbest)

@@ -225,3 +225,20 @@ ggplot(all_diffs_long, aes(x = age, y = value)) +
   geom_smooth(method = "lm") +
   facet_wrap(vars(name), scales = "free") +
   theme_bw()
+
+# All-to-all correlation ====
+
+library(corrr)
+
+all_to_all <- all_data %>%
+  select(-id, -contains("cgss"), -starts_with("cdi"),
+         -starts_with("vrrsb"), -starts_with("nwords"),
+         -matches("aloof|rigid|pl"))
+
+correlate(all_to_all) %>%
+  shave() %>%
+  mutate(
+    across(where(is.numeric), ~round(., 2))
+  ) %>%
+  clipr::write_clip()
+
