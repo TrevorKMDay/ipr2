@@ -241,6 +241,8 @@ pe <- parameterestimates(vrrsbt_model3) %>%
 
 show_params_std(vrrsbt_model3)
 
+vrrsbt_model3_effsizes <- metaSEM::calEffSizes(vrrsbt_model3, data = all_data)
+
 ggplot(pe, aes(x = rhs)) +
   geom_pointrange(aes(y = est, ymin = ci.lower, ymax = ci.upper,
                       fill = parent, linetype = parent, shape = parent),
@@ -409,3 +411,42 @@ lavaanPlot(vrrsbt_model5, coefs = TRUE, covs = TRUE, sig = .05)
 vrs_model_comparison <- compareFit(vrrsbt_model3,vrrsbt_model5, nested = TRUE)
 
 # Adding these terms improve A/BIC, but none of the other fit indices
+
+# Did the outlier affect the results?
+
+vrrsbt_model4_2 <- sem(vrrsbt_modelspec4,
+                       data = filter(all_data, !vrrsb_outlier),
+                       missing = "ML")
+
+lavaanPlot(vrrsbt_model4_2, coefs = TRUE, covs = TRUE, sig = .05)
+
+pe4 <- parameterEstimates(vrrsbt_model4)
+pe4.2 <- parameterEstimates(vrrsbt_model4_2)
+
+pe4_comparison <- left_join(pe4, pe4.2, by = c("lhs", "op", "rhs", "label"),
+                            suffix = c(".1", ".2")) %>%
+  select(-starts_with("ci"), -starts_with("se"), -starts_with("z")) %>%
+  mutate(
+    across(starts_with("est"), ~signif(., 3)),
+    across(starts_with("pvalue"), ~round(., 3)),
+    p1 = pvalue.1 < .05,
+    p2 = pvalue.2 < .05
+  ) %>%
+  filter(
+    !is.na(pvalue.1 )
+  )
+
+pe4_comparison %>%
+  filter(
+    p1 != p2
+  )
+
+clipr::write_clip(pe4_comparison)
+
+# Effect sizes
+
+sd_p1 <- sd(all_data2$vrrsb_total_pcg)
+sd_p2 <- sd(all_data2$vrrsb_total_scg)
+
+pe4$est[pe4$rhs == "c1a-c1b"] / sqrt((sd_p1 + sd_p2) / 2)
+

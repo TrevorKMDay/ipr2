@@ -205,7 +205,9 @@
 %        (p2tswc) ;
 %
 %        % bapq effects
-        \draw [arrow] (p1bapq) -- node[anchor=south] {\bapqpcg} (cdi1) ;
+        \draw [arrow,dashed] (p1bapq)
+            -- node[anchor=south] {\bapqpcg{}\ns{}}
+        (cdi1) ;
 %
         \draw [arrow,dashed] (p2bapq)
             -- node[anchor=north] {\bapqscg{}\ns{}}

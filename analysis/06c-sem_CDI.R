@@ -142,6 +142,10 @@ cdi_modelspec2 <- '
     p3 := p3a - p3b
     p4 := p4a - p4b
 
+    # In order to extract effect sizes, we have to use the := operator
+    pcg_bapq := p3a
+    scg_bapq := p3b
+
   '
 
 cdi_model2 <- sem(cdi_modelspec2, data = all_data, missing = "ML")
@@ -180,6 +184,9 @@ cdi_pe <- parameterestimates(cdi_model2) %>%
     pvalue = round(pvalue, 4)
 
   )
+
+cdi_model2_effsizes <- metaSEM::calEffSizes(cdi_model2, data = all_data)
+round(cdi_model2_effsizes$ES, 2)
 
 ggplot(cdi_pe, aes(x = rhs)) +
   geom_pointrange(aes(y = est, ymin = ci.lower, ymax = ci.upper,
@@ -255,13 +262,23 @@ cdi_modelspec3 <- '
 
     i1 := i1a - i1b
 
+    # In order to extract effect sizes, we have to use the := operator
+    pcg_bapq := p3a
+    scg_bapq := p3b
+
+
   '
 
 cdi_model3 <- sem(cdi_modelspec3, data = all_data, missing = "ML")
 lavaanPlot(cdi_model3, coefs = TRUE, covs = TRUE, sig = .05)
 
+cdi_model3_pe <- parameterEstimates(cdi_model3)
+
 compareFit(cdi_model2, cdi_model3) %>%
   summary()
+
+cdi_model3_effsizes <- metaSEM::calEffSizes(cdi_model3, data = all_data)
+round(cdi_model3_effsizes$ES, 2)
 
 ## CGSS ====
 

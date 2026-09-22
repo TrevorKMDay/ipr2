@@ -421,3 +421,22 @@ parents_demo <- left_join(demo1_sexed, demo2_pcg, join_by(id, p1p2)) %>%
 parents_demo[!complete.cases(parents_demo), ]
 write_rds(parents_demo, here("analysis", "demo_parents.rds"))
 
+# Data for Dev and Psychpath abstract
+
+age_mean <- mean(child_ages$child_age_mo)
+age_sd <- sd(child_ages$child_age_mo)
+age_range <- range(child_ages$child_age_mo)
+
+child_sex <- demo1 %>%
+  select(CandID, sex) %>%
+  distinct()
+
+table(child_sex$sex) / nrow(child_sex)
+
+child_racethnicity <- demo1 %>%
+  select(CandID, starts_with("subject_")) %>%
+  mutate(
+    across(starts_with("subject_"), ~replace_values(.x, from = "not_answered",
+                                                   to = NA_character_))
+  ) %>%
+  na.omit()
